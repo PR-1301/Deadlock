@@ -1,13 +1,14 @@
 import React from 'react';
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import './AdminLayout.css';
+import { clearAdminSession } from '../../api/adminAuth';
 
 const AdminLayout = () => {
     const navigate = useNavigate();
 
     const handleLogout = () => {
         if (window.confirm('Terminate Admin Session?')) {
-            localStorage.removeItem('deadlockAdminAuth');
+            clearAdminSession();
             navigate('/admin/login');
         }
     };

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import './CrackCodeAdmin.css';
+import { adminFetch } from '../api/adminAuth';
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL || `http://${window.location.hostname}:5000`;
 const CrackCodeAdmin = () => {
@@ -29,7 +30,7 @@ const CrackCodeAdmin = () => {
                 setIsSessionActive(statusData.started);
 
                 // Question bank + current selection
-                const questionsRes = await fetch(`${BASE_URL}/api/admin/crack-code/questions`);
+                const questionsRes = await adminFetch(`${BASE_URL}/api/admin/crack-code/questions`);
                 if (questionsRes.ok) {
                     const questionsData = await questionsRes.json();
                     setQuestions(questionsData.questions || []);
@@ -42,7 +43,7 @@ const CrackCodeAdmin = () => {
 
                 // Fetch winner info if session is active
                 if (statusData.started) {
-                    const winnerRes = await fetch(`${BASE_URL}/api/admin/crack-code/winner-info`);
+                    const winnerRes = await adminFetch(`${BASE_URL}/api/admin/crack-code/winner-info`);
                     const winnerData = await winnerRes.json();
                     if (winnerData.winnerFound) {
                         setWinnerInfo(winnerData);
@@ -67,7 +68,7 @@ const CrackCodeAdmin = () => {
         setSelectedQuestionId(questionId); // optimistic
         setQuestionError(null);
         try {
-            const response = await fetch(`${BASE_URL}/api/admin/crack-code/question`, {
+            const response = await adminFetch(`${BASE_URL}/api/admin/crack-code/question`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ questionId })
@@ -92,7 +93,7 @@ const CrackCodeAdmin = () => {
         setStatus({ type: 'info', message: 'INJECTING SESSION DATA...' });
 
         try {
-            const response = await fetch(`${BASE_URL}/api/admin/crack-code/start`, {
+            const response = await adminFetch(`${BASE_URL}/api/admin/crack-code/start`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
@@ -122,7 +123,7 @@ const CrackCodeAdmin = () => {
         setStatus({ type: 'info', message: 'PURGING SESSION DATA...' });
 
         try {
-            const response = await fetch(`${BASE_URL}/api/admin/crack-code/reset`, {
+            const response = await adminFetch(`${BASE_URL}/api/admin/crack-code/reset`, {
                 method: 'DELETE'
             });
 

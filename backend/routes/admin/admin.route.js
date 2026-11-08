@@ -20,9 +20,22 @@ const {
 
 const { solveProblem } = require("../../controller/deadlock.controller.js");
 const { getSecuritySettings, updateSecuritySettings } = require("../../controller/admin/security.controller.js");
+const { requireAdmin } = require("../../utils/adminAuth");
 
-
+// ---------------------------------------------------------------------------
+// PUBLIC - used by player pages (registration + anti-cheat settings).
+// Must stay above `router.use(requireAdmin)`.
+// ---------------------------------------------------------------------------
 router.get("/security-settings", getSecuritySettings);
+router.get("/team/check/:name", checkTeam);
+router.post("/team/check", checkTeam);
+router.post("/team", createTeam);
+
+// ---------------------------------------------------------------------------
+// ADMIN ONLY - everything below requires a valid admin token
+// ---------------------------------------------------------------------------
+router.use(requireAdmin);
+
 router.post("/security-settings", updateSecuritySettings);
 
 router.post("/match", createMatch);
@@ -30,14 +43,10 @@ router.post("/match", createMatch);
 router.post("/solve", solveProblem);
 router.post("/deadlock/start-all", startAllDeadlockMatches);
 router.post("/terminate", terminateSession);
-router.post("/team", createTeam);
 // New routes for Shuffle and Promote feature
 router.get("/match/team/:name", getMatchByTeamName);
 router.post("/match/:id/shuffle", shuffleCurrentQuestion);
 router.post("/match/promote", promoteTeam);
-
-router.post("/team/check", checkTeam);
-router.get("/team/check/:name", checkTeam);
 
 router.patch("/match/:id/update-teams", updateTeams);
 router.patch("/match/:id/swap", swapTeams);

@@ -9,7 +9,8 @@ const crackCodeRoutes = require("./routes/admin/crackCode.route");
 const publicCrackCodeRoutes = require("./routes/public/crackCode.route");
 
 const deadlockAdminRoutes = require("./routes/admin/admin.route");
-const codeRoutes = require("./routes/public/code.route");
+const adminAuthRoutes = require("./routes/admin/auth.route");
+const { requireAdmin, verifyToken, isConfigured: adminAuthConfigured } = require("./utils/adminAuth");
 const deadlockRoute = require("./routes/public/deadlock.routes");
 
 
@@ -30,7 +31,13 @@ app.set("io", io);
 io.on("connection", (socket) => {
   console.log(">>> [SOCKET] User connected:", socket.id);
 
-  socket.on("join-admin", () => {
+  // Admin room receives security logs: require a valid admin token to join
+  socket.on("join-admin", (token) => {
+    if (!verifyToken(token)) {
+      console.log(">>> [SOCKET] Rejected admin join (invalid token):", socket.id);
+      socket.emit("admin-auth-error", { message: "ADMIN AUTHENTICATION REQUIRED" });
+      return;
+    }
     socket.join("admin-room");
     console.log(">>> [SOCKET] Admin joined room:", socket.id);
   });
@@ -69,7 +76,14 @@ app.use(cors({
   origin: "*",
 }));
 
+// Behind Render's proxy: use the client IP from X-Forwarded-For (login rate limiting)
+app.set("trust proxy", 1);
+
 app.use(express.json());
+
+if (!adminAuthConfigured()) {
+  console.warn(">>> [AUTH] ADMIN_PASSCODE is not set: admin login and admin APIs are disabled.");
+}
 
 app.get("/", (req, res) => {
   res.send("Deadlock backend running with Socket.io");
@@ -77,11 +91,11 @@ app.get("/", (req, res) => {
 
 // --------------------------------Routes--------------------------------
 app.use("/api/public/deadlock", deadlockRoute);
-app.use("/api/admin/deadlock", deadlockAdminRoutes);
-app.use("/api/admin/crack-code", crackCodeRoutes);
+app.use("/api/admin/auth", adminAuthRoutes);
+app.use("/api/admin/deadlock", deadlockAdminRoutes); // public player routes + requireAdmin inside
+app.use("/api/admin/crack-code", requireAdmin, crackCodeRoutes);
 app.use("/api/public/crack-code", publicCrackCodeRoutes);
 // app.use("/api/public/deadlock", publicDeadlockRoutes);
-app.use("/api/public/code", codeRoutes);
 app.use("/api/public/glitch", require("./routes/public/glitch.routes"));
 
 //-------------------------------Dev Route -------------------------------------

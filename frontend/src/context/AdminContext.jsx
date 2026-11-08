@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { io } from 'socket.io-client';
+import { getAdminToken } from '../api/adminAuth';
 
 const AdminContext = createContext();
 
@@ -25,7 +26,7 @@ export const AdminProvider = ({ children }) => {
 
         socketRef.current.on('connect', () => {
             setConnected(true);
-            socketRef.current.emit('join-admin');
+            socketRef.current.emit('join-admin', getAdminToken());
         });
 
         socketRef.current.on('new-log', (log) => {

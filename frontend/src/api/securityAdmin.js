@@ -1,14 +1,15 @@
 import axios from 'axios';
+import { attachAdminAuth } from './adminAuth';
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL || "";
 const API_URL = `${BASE_URL}/api/admin/deadlock`;
 
-const api = axios.create({
+const api = attachAdminAuth(axios.create({
     baseURL: API_URL,
     headers: {
         'Content-Type': 'application/json',
     },
-});
+}));
 
 export const getSecuritySettings = async () => {
     try {

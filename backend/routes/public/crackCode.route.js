@@ -226,47 +226,45 @@ router.post("/submit", async (req, res) => {
       !!session.validatedCodeHash &&
       session.validatedCodeHash === hashSubmission(language, submittedLogic);
 
+    const resultMessage = (sub) =>
+      sub.finalWinner
+        ? "YOU WON\nYOU SUCCESSFULLY CRACKED THE CODE BY REVERSE ENGINEERING"
+        : sub.isCorrect
+          ? "YOUR EFFORTS NEED TO BE APPRECIATED\nBUT SMALL TIME MANAGEMENT LACKING DECIDED SOMEOTHER AS WINNER. YOU CRACKED THE CODE..."
+          : "THANK YOU FOR PARTICIPATION\nTHE GAME HAS ENDED";
+
     // 1. Check if CURRENT team already submitted
     const existing = await CrackCodeSubmission.findOne({ teamId, crackCodeSessionId: sessionId });
     if (existing) {
-      return res.json({
-        success: true,
-        isFirst: existing.finalWinner,
-        message: existing.finalWinner
-          ? "YOU WON\nYOU SUCCESSFULLY CRACKED THE CODE BY REVERSE ENGINEERING"
-          : existing.isCorrect
-            ? "YOUR EFFORTS NEED TO BE APPRECIATED\nBUT SMALL TIME MANAGEMENT LACKING DECIDED SOMEOTHER AS WINNER. YOU CRACKED THE CODE..."
-            : "THANK YOU FOR PARTICIPATION\nTHE GAME HAS ENDED"
-      });
+      return res.json({ success: true, isFirst: existing.finalWinner, message: resultMessage(existing) });
     }
 
-    // 2. Check if ANY team already won
-    const globalWinner = await CrackCodeSubmission.findOne({ finalWinner: true });
-    // A team can only be a finalWinner if they are correct AND no one else has won yet
-    const isFirst = isCorrect && !globalWinner;
+    // 2. Insert. A correct submission tries to claim the winner slot; the unique
+    //    partial index on { finalWinner: true } guarantees only one claim succeeds,
+    //    even when two teams submit in the same millisecond.
+    const base = { teamId, crackCodeSessionId: sessionId, submittedLogic, isCorrect, submittedAt: new Date() };
+    let submission;
+    try {
+      submission = await CrackCodeSubmission.create({ ...base, finalWinner: isCorrect });
+    } catch (err) {
+      if (err.code !== 11000) throw err;
+      // Duplicate key: either this team double-submitted, or another team already won.
+      const dup = await CrackCodeSubmission.findOne({ teamId, crackCodeSessionId: sessionId });
+      if (dup) {
+        return res.json({ success: true, isFirst: dup.finalWinner, message: resultMessage(dup) });
+      }
+      try {
+        submission = await CrackCodeSubmission.create({ ...base, finalWinner: false });
+      } catch (err2) {
+        if (err2.code !== 11000) throw err2;
+        submission = await CrackCodeSubmission.findOne({ teamId, crackCodeSessionId: sessionId });
+      }
+    }
 
-    // 3. Create record
-    const submission = new CrackCodeSubmission({
-      teamId,
-      crackCodeSessionId: sessionId,
-      submittedLogic,
-      isCorrect,
-      finalWinner: isFirst,
-      submittedAt: new Date()
-    });
-
-    await submission.save();
+    const isFirst = submission.finalWinner;
     await CrackCodeSession.findByIdAndUpdate(sessionId, { endedAt: new Date() });
 
-    return res.json({
-      success: true,
-      isFirst,
-      message: isFirst
-        ? "YOU WON\nYOU SUCCESSFULLY CRACKED THE CODE BY REVERSE ENGINEERING"
-        : isCorrect
-          ? "YOUR EFFORTS NEED TO BE APPRECIATED\nBUT SMALL TIME MANAGEMENT LACKING DECIDED SOMEOTHER AS WINNER. YOU CRACKED THE CODE..."
-          : "THANK YOU FOR PARTICIPATION\nTHE GAME HAS ENDED"
-    });
+    return res.json({ success: true, isFirst, message: resultMessage(submission) });
   } catch (error) {
     console.error("Submission error:", error);
     return res.status(500).json({ message: "Internal server error" });

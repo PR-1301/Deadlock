@@ -222,11 +222,20 @@ ${prep}
 
     if (language === 'java') {
         const { prep, call } = getCallLogic('java', parameters['java']);
+        // Java requires imports before any class, so hoist the user's imports above Main.
+        const lines = code.split('\n');
+        const userImports = lines.filter(l => l.trim().startsWith('import ')).join('\n');
+        const userBody = lines
+            .filter(l => !l.trim().startsWith('import ') && !l.trim().startsWith('package '))
+            .join('\n');
+        // Main must NOT be public: Wandbox saves the source as prog.java, and a public
+        // class has to match the file name. The first class in the file is the entry point.
         return `
+${userImports}
 import java.util.*;
 import java.util.stream.*;
 
-public class Main {
+class Main {
     // Helper to print arrays/lists recursively
     public static void printResult(Object obj) {
         if (obj == null) {
@@ -274,7 +283,7 @@ ${prep}
     }
 }
 
-${code}
+${userBody}
 `;
     }
 

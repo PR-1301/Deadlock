@@ -1,23 +1,27 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import '../../pages/Admin.css'; // Reuse existing admin styles for theme consistency
+import { adminLogin } from '../../api/adminAuth';
 
 const AdminLogin = () => {
     const [passcode, setPasscode] = useState('');
     const [error, setError] = useState('');
+    const [submitting, setSubmitting] = useState(false);
     const navigate = useNavigate();
 
-    const handleLogin = (e) => {
+    // Passcode is verified by the backend, which returns a signed admin token
+    const handleLogin = async (e) => {
         e.preventDefault();
-
-
-        const envPasscode = import.meta.env.VITE_ADMIN_PASSCODE;
-
-        if (passcode === envPasscode || passcode === 'admin123') {
-            localStorage.setItem('deadlockAdminAuth', 'true');
+        if (submitting) return;
+        setSubmitting(true);
+        setError('');
+        try {
+            await adminLogin(passcode);
             navigate('/admin/dashboard');
-        } else {
-            setError('ACCESS DENIED: INVALID CREDENTIALS');
+        } catch (err) {
+            setError(err.message === 'Failed to fetch' ? 'NETWORK INTERRUPT: SERVER UNREACHABLE' : err.message);
+        } finally {
+            setSubmitting(false);
         }
     };
 
@@ -69,8 +73,9 @@ const AdminLogin = () => {
                         type="submit"
                         className="cyber-btn primary"
                         style={{ padding: '1rem' }}
+                        disabled={submitting}
                     >
-                        AUTHENTICATE
+                        {submitting ? 'VERIFYING...' : 'AUTHENTICATE'}
                     </button>
                 </form>
             </div>

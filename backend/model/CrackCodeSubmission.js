@@ -29,6 +29,15 @@ const crackCodeSubmissionSchema = new mongoose.Schema({
     },
 });
 
+// Race-safety: enforced by MongoDB, not by "check then insert" in application code.
+// Only ONE submission can ever be the final winner...
+crackCodeSubmissionSchema.index(
+    { finalWinner: 1 },
+    { unique: true, partialFilterExpression: { finalWinner: true } }
+);
+// ...and a team can submit only once per session.
+crackCodeSubmissionSchema.index({ teamId: 1, crackCodeSessionId: 1 }, { unique: true });
+
 module.exports = mongoose.model(
     "CrackCodeSubmission",
     crackCodeSubmissionSchema
