@@ -80,9 +80,7 @@ const executeCode = async (req, res) => {
         const output = result.run.stdout;
         const error = result.run.stderr;
 
-        // 3. Save Attempt
-        // We'll increment attempt count regardless of success/error for now, or maybe just success?
-        // Let's increment attemptsUsed in session
+
         session.attemptsUsed += 1;
         await session.save();
 

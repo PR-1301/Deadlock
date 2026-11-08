@@ -5,48 +5,8 @@ import './CrackTheCode.css';
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL || `http://${window.location.hostname}:5000`;
 
-const LANGUAGE_VERSIONS = {
-    python: "3.10.0",
-    cpp: "10.2.0",
-    javascript: "18.15.0",
-    java: "15.0.2"
-};
-
-const DEFAULT_CODE = {
-    python: `# Write your Python code here
-def decodeLogic(nums):
-    #Implement your logic here`,
-    cpp: `// Write your C++ code here
-#include <iostream>
-#include <vector>
-using namespace std;
-
-class Solution {
-public:
-    vector<vector<int>> decodeLogic(vector<int>& nums) {
-        //Implement your logic here
-    }
-};`,
-    javascript: `// Write your JavaScript code here
-function decodeLogic(nums) {
-    //Implement your logic here
-}`,
-    java: `// Write your Java code here
-import java.util.*;
-
-class Solution {
-    public int[][] decodeLogic(int[] nums) {
-        //Implement your logic here
-    }
-}`
-};
-
-const TEST_CASES = [
-    { input: "nums = [1,2,2]", output: "[[], [1], [1,2], [1,2,2], [2], [2,2]]", args: [[1,2,2]] },
-    { input: "nums = [0]", output: "[[], [0]]", args: [[0]] },
-    { input: "nums = [2,2,2]", output: "[ [],[2], [2,2],[2,2,2]]", args: [[2,2,2]]},
-    { input: "nums = [4,4,4,1,4]", output: "[[],[1],[1,4],[1,4,4],[1,4,4,4],[1,4,4,4,4],[4],[4,4],[4,4,4],[4,4,4,4]]", args: [[4,4,4,1,4]], hidden: true }
-];
+// Question (starter code + visible test cases) is served by the backend with the session.
+// Running and grading happen server-side; hidden test cases never reach the browser.
 
 // --- Memoized Cinematic Components (Defined at top to avoid TDZ) ---
 
@@ -240,7 +200,8 @@ const CrackTheCode = () => {
 
     const [language, setLanguage] = useState('python');
 
-    const [codeMap, setCodeMap] = useState(DEFAULT_CODE);
+    const [testCases, setTestCases] = useState([]);
+    const [codeMap, setCodeMap] = useState({});
     const [activeTestCase, setActiveTestCase] = useState(0);
 
     // Timer State
@@ -253,7 +214,8 @@ const CrackTheCode = () => {
     const [isRunning, setIsRunning] = useState(false);
     const [testResults, setTestResults] = useState({});
     const [hiddenTestResult, setHiddenTestResult] = useState(null);
-    const [lastValidatedCode, setLastValidatedCode] = useState("");
+    // { language, code } of the last run that passed every visible + hidden case
+    const [lastValidated, setLastValidated] = useState(null);
 
     // DISMISSAL STATE
     const [isDismissed, setIsDismissed] = useState(false);
@@ -371,168 +333,6 @@ const CrackTheCode = () => {
         `, 'ts:filename/console.d.ts');
     }, []);
 
-    const executeTestCase = React.useCallback(async (testCase, lang, code) => {
-        const teamId = localStorage.getItem("teamId");
-        let codeToRun = code;
-        let stdinData = "";
-
-        if (lang === "python") {
-            stdinData = JSON.stringify(testCase.args);
-            codeToRun = `
-import sys
-import json
-${code}
-
-if __name__ == "__main__":
-    try:
-        input_data = sys.stdin.read()
-        if input_data:
-            args = json.loads(input_data)
-            ret = decodeLogic(*args)
-            print("\\n---RESULT---") 
-            print(json.dumps(ret).replace(" ", "")) 
-    except Exception as e:
-        print(e)
-`;
-        } else if (lang === "javascript") {
-            stdinData = JSON.stringify(testCase.args);
-            codeToRun = `
-${code}
-
-const fs = require('fs');
-try {
-    const input = fs.readFileSync(0, 'utf-8');
-    if (input) {
-        const args = JSON.parse(input);
-        const ret = decodeLogic(...args);
-        console.log("\\n---RESULT---");
-        if (ret !== undefined) {
-             console.log(JSON.stringify(ret).replace(/\\s/g, ''));
-        } else {
-             console.log("undefined");
-        }
-    }
-} catch(e) {
-    console.log(e.toString());
-}
-`;
-        } else if (lang === "cpp") {
-            const nums = testCase.args[0];
-            const target = testCase.args[1];
-            stdinData = `${nums.length} ${nums.join(' ')} ${target}`;
-
-            codeToRun = `
-${code}
-
-int main() {
-    int n;
-    if (cin >> n) {
-        vector<int> nums(n);
-        for (int i = 0; i < n; ++i) {
-            cin >> nums[i];
-        }
-        int target;
-        cin >> target;
-        
-        Solution s;
-        vector<int> result = s.decodeLogic(nums, target);
-        
-        cout << "\\n---RESULT---" << endl;
-        cout << "[";
-        for (size_t i = 0; i < result.size(); ++i) {
-            cout << result[i] << (i < result.size() - 1 ? "," : "");
-        }
-        cout << "]" << endl;
-    }
-    return 0;
-}
-`;
-        } else if (lang === "java") {
-            const nums = testCase.args[0];
-            const target = testCase.args[1];
-            stdinData = `${nums.length} ${nums.join(' ')} ${target}`;
-
-            const lines = code.split('\n');
-            const imports = lines.filter(line => line.trim().startsWith('import ')).join('\n');
-            const otherCode = lines.filter(line => !line.trim().startsWith('import ')).join('\n');
-
-            codeToRun = `
-${imports}
-import java.util.*;
-
-public class Main {
-    public static void main(String[] args) {
-        Scanner scanner = new Scanner(System.in);
-        if (scanner.hasNextInt()) {
-            int n = scanner.nextInt();
-            int[] nums = new int[n];
-            for (int i = 0; i < n; i++) {
-                nums[i] = scanner.nextInt();
-            }
-            int target = scanner.nextInt();
-            
-            Solution s = new Solution();
-            int[] result = s.decodeLogic(nums, target);
-            
-            System.out.println("\\n---RESULT---");
-            System.out.print("[");
-            for (int i = 0; i < result.length; i++) {
-                System.out.print(result[i] + (i < result.length - 1 ? "," : ""));
-            }
-            System.out.println("]");
-        }
-    }
-}
-
-${otherCode}
-`;
-        }
-
-        const files = [{ content: codeToRun }];
-        if (lang === "java") {
-            files[0].name = "Main.java";
-        }
-
-        const response = await fetch(`${BASE_URL}/api/public/code/execute`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                teamId,
-                language: lang === 'cpp' ? 'c++' : lang,
-                version: LANGUAGE_VERSIONS[lang],
-                files: files,
-                stdin: stdinData,
-            }),
-        });
-
-        const data = await response.json();
-
-        if (response.ok) {
-            const fullOutput = data.output || data.error || "";
-            const splitMarker = "---RESULT---";
-            let log = fullOutput;
-            let result = "";
-
-            if (fullOutput.includes(splitMarker)) {
-                const parts = fullOutput.split(splitMarker);
-                log = parts[0].trim();
-                result = parts[1].trim();
-            }
-
-            const expected = testCase.output.replace(/\s/g, '');
-            const actual = result.replace(/\s/g, '');
-
-            return {
-                log: log,
-                result: result,
-                isCorrect: actual === expected,
-                status: "success"
-            };
-        } else {
-            return { log: data.message, result: "Error", isCorrect: false, status: "error" };
-        }
-    }, []);
-
     const handleRun = React.useCallback(async () => {
         const teamId = localStorage.getItem("teamId");
         if (!teamId) {
@@ -540,56 +340,46 @@ ${otherCode}
             return;
         }
 
+        const code = codeMap[language] || "";
         setIsRunning(true);
         setTestResults({});
         setHiddenTestResult(null);
 
-        let allVisiblePassedInProgress = true;
+        try {
+            const response = await fetch(`${BASE_URL}/api/public/crack-code/run`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ teamId, language, code }),
+            });
+            const data = await response.json();
 
-        for (let index = 0; index < TEST_CASES.length; index++) {
-            const testCase = TEST_CASES[index];
-            if (testCase.hidden) continue;
-
-            try {
-                const result = await executeTestCase(testCase, language, codeMap[language]);
-                setTestResults(prev => ({ ...prev, [index]: result }));
-
-                if (!result.isCorrect) {
-                    allVisiblePassedInProgress = false;
-                }
-            } catch (error) {
-                setTestResults(prev => ({
-                    ...prev,
-                    [index]: { log: "Network Error", result: error.message, isCorrect: false, status: "error" }
-                }));
-                allVisiblePassedInProgress = false;
+            if (!response.ok) {
+                const failed = {};
+                testCases.forEach((_, i) => {
+                    failed[i] = { log: data.message || "Execution failed", result: "Error", isCorrect: false, status: "error" };
+                });
+                setTestResults(failed);
+                return;
             }
-        }
 
-        if (allVisiblePassedInProgress) {
-            const hiddenTestCase = TEST_CASES.find(tc => tc.hidden);
-            if (hiddenTestCase) {
-                try {
-                    const result = await executeTestCase(hiddenTestCase, language, codeMap[language]);
-                    if (result.isCorrect) {
-                        setHiddenTestResult("Hidden Test Case Passed!");
-                        setLastValidatedCode(codeMap[language]);
-                    } else {
-                        setHiddenTestResult("Hidden Test Case Failed");
-                    }
-                } catch (e) {
-                    setHiddenTestResult("Hidden Test Case Error");
-                }
-            } else {
-                // No hidden test case to run
-                setLastValidatedCode(codeMap[language]);
-            }
-        } else {
-            setHiddenTestResult(null);
-        }
+            const results = {};
+            data.results.forEach((r, i) => { results[i] = { ...r, status: "success" }; });
+            setTestResults(results);
 
-        setIsRunning(false);
-    }, [language, codeMap, executeTestCase]);
+            if (data.hiddenPassed === true) setHiddenTestResult("Hidden Test Case Passed!");
+            else if (data.hiddenPassed === false) setHiddenTestResult("Hidden Test Case Failed");
+
+            setLastValidated(data.validated ? { language, code } : null);
+        } catch (error) {
+            const failed = {};
+            testCases.forEach((_, i) => {
+                failed[i] = { log: "Network Error", result: error.message, isCorrect: false, status: "error" };
+            });
+            setTestResults(failed);
+        } finally {
+            setIsRunning(false);
+        }
+    }, [language, codeMap, testCases]);
 
     const handleSubmit = React.useCallback(async (isAutoSubmit = false) => {
         const teamId = localStorage.getItem("teamId");
@@ -606,8 +396,9 @@ ${otherCode}
                 body: JSON.stringify({
                     teamId,
                     sessionId: sessionId,
-                    submittedLogic: codeMap[language],
-                    isCorrect: isAutoSubmit ? false : true
+                    submittedLogic: codeMap[language] || "",
+                    language,
+                    autoSubmit: isAutoSubmit
                 }),
             });
 
@@ -640,10 +431,10 @@ ${otherCode}
         }
     }, []);
 
-    const allVisiblePassed = TEST_CASES.filter(tc => !tc.hidden).every((_, index) => testResults[index]?.isCorrect);
-    const hiddenPassed = hiddenTestResult === "Hidden Test Case Passed!";
-    const codeMatchesValidated = codeMap[language] === lastValidatedCode;
-    const isSubmitEnabled = allVisiblePassed && hiddenPassed && codeMatchesValidated;
+    // Server is the source of truth on submit; this only gates the button.
+    const isSubmitEnabled = !!lastValidated
+        && lastValidated.language === language
+        && lastValidated.code === codeMap[language];
 
     if (!isGameStarted) {
         return <CrackCodeLobby onGameReady={(sessionData) => {
@@ -655,6 +446,10 @@ ${otherCode}
                 const remaining = Math.max(0, totalDuration - elapsedSeconds);
                 setTimeLeft(remaining);
                 setSessionId(sessionData.sessionId);
+                if (sessionData.question) {
+                    setTestCases(sessionData.question.testCases || []);
+                    setCodeMap(sessionData.question.starterCode || {});
+                }
                 if (sessionData.submission) {
                     setSubmissionResult(sessionData.submission);
                 }
@@ -758,6 +553,7 @@ ${otherCode}
 
             <div className="crack-container">
                 <LeftPanel
+                    testCases={testCases}
                     activeTestCase={activeTestCase}
                     setActiveTestCase={setActiveTestCase}
                     testResults={testResults}
@@ -766,7 +562,7 @@ ${otherCode}
 
                 <RightPanel
                     language={language}
-                    code={codeMap[language]}
+                    code={codeMap[language] || ""}
                     isRunning={isRunning}
                     isSubmitting={isSubmitting}
                     isSubmitEnabled={isSubmitEnabled}
@@ -786,14 +582,14 @@ ${otherCode}
 
 // --- Memoized Panel Components ---
 
-const LeftPanel = React.memo(({ activeTestCase, setActiveTestCase, testResults, hiddenTestResult }) => {
+const LeftPanel = React.memo(({ testCases, activeTestCase, setActiveTestCase, testResults, hiddenTestResult }) => {
     return (
         <div className="panel left-panel">
             <div className="panel-header">
                 <h2>Testcases</h2>
             </div>
             <div className="testcase-tabs">
-                {TEST_CASES.filter(tc => !tc.hidden).map((_, index) => {
+                {testCases.map((_, index) => {
                     const result = testResults[index];
                     let statusClass = '';
                     if (result) {
@@ -823,11 +619,11 @@ const LeftPanel = React.memo(({ activeTestCase, setActiveTestCase, testResults, 
             <div className="testcase-content">
                 <div className="io-group">
                     <span className="label">Input =</span>
-                    <div className="io-box">{TEST_CASES[activeTestCase].input}</div>
+                    <div className="io-box">{testCases[activeTestCase]?.input}</div>
                 </div>
                 <div className="io-group">
                     <span className="label">Output =</span>
-                    <div className="io-box">{TEST_CASES[activeTestCase].output}</div>
+                    <div className="io-box">{testCases[activeTestCase]?.output}</div>
                 </div>
             </div>
 

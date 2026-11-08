@@ -23,6 +23,12 @@ const gameStateSchema = new mongoose.Schema({
     glitchActiveUntil: {
         type: Date,
         default: null
+    },
+
+    // Crack the Code: question chosen by the admin for the next / current round
+    crackCodeQuestionId: {
+        type: String,
+        default: null
     }
 
 }, { timestamps: true });

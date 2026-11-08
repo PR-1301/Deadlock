@@ -5,6 +5,29 @@ const mongoose = require("mongoose");
 const CrackCodeSession = require("../../model/CrackCodeSession");
 const CrackCodeSubmission = require("../../model/CrackCodeSubmission");
 const Team = require("../../model/team.model");
+const CrackCodeAttempt = require("../../model/CrackCodeAttempt");
+const GameState = require("../../model/gameState.model");
+const {
+  DEFAULT_QUESTION_ID,
+  getQuestionById,
+  toPublicQuestion,
+} = require("../../config/crackCodeQuestions");
+const { SUPPORTED_LANGUAGES, runCases, hashSubmission } = require("../../utils/crackCodeRunner");
+
+const sessionQuestion = (session) =>
+  getQuestionById(session.questionId) || getQuestionById(DEFAULT_QUESTION_ID);
+
+// Returns true when another team's glitch is active and this team must be blocked
+const isGlitchBlocked = async (teamId) => {
+  const state = await GameState.findOne({ key: "GLOBAL_STATE" });
+  return !!(
+    state &&
+    state.glitchActiveUntil &&
+    new Date() < new Date(state.glitchActiveUntil) &&
+    state.firstBloodTeamId &&
+    state.firstBloodTeamId.toString() !== String(teamId)
+  );
+};
 
 /*
   GET /crack-code/session/:teamId
@@ -41,6 +64,7 @@ router.get("/session/:teamId", async (req, res) => {
       maxAttempts: session.maxAttempts,
       startedAt: session.startedAt,
       endedAt: session.endedAt || null,
+      question: toPublicQuestion(sessionQuestion(session)),
       submission: submission ? {
         isFirst: submission.finalWinner,
         message: submission.finalWinner
@@ -90,29 +114,117 @@ router.get("/team-status/:teamId", async (req, res) => {
   }
 });
 
+/*
+  POST /crack-code/run
+  Body: { teamId, language, code }
+
+  Runs the code against the round's visible test cases; if all pass, runs the
+  hidden test cases too. Hidden case data / output never leaves the server.
+*/
+router.post("/run", async (req, res) => {
+  try {
+    const { teamId, language, code } = req.body || {};
+
+    if (!teamId || !mongoose.Types.ObjectId.isValid(teamId)) {
+      return res.status(400).json({ message: "Valid teamId is required" });
+    }
+    if (!SUPPORTED_LANGUAGES.includes(language)) {
+      return res.status(400).json({ message: "Unsupported language" });
+    }
+    if (typeof code !== "string" || !code.trim()) {
+      return res.status(400).json({ message: "Code is required" });
+    }
+
+    if (await isGlitchBlocked(teamId)) {
+      return res.status(403).json({ success: false, message: "SYSTEM GLITCH ACTIVE - ACCESS DENIED" });
+    }
+
+    const session = await CrackCodeSession.findOne({ teamId });
+    if (!session) {
+      return res.status(404).json({ message: "Session not found for this team" });
+    }
+    if (session.endedAt) {
+      return res.status(403).json({ message: "Session already ended" });
+    }
+
+    const question = sessionQuestion(session);
+
+    const results = await runCases({ language, code, question, cases: question.testCases });
+    const allVisiblePassed = results.every((r) => r.isCorrect);
+
+    let hiddenPassed = null; // null = not run (some visible case failed)
+    if (allVisiblePassed && question.hiddenTestCases.length > 0) {
+      const hidden = await runCases({ language, code, question, cases: question.hiddenTestCases });
+      hiddenPassed = hidden.every((r) => r.isCorrect);
+    } else if (allVisiblePassed) {
+      hiddenPassed = true;
+    }
+
+    const passedEverything = allVisiblePassed && hiddenPassed === true;
+
+    session.attemptsUsed += 1;
+    session.validatedCodeHash = passedEverything ? hashSubmission(language, code) : null;
+    await session.save();
+
+    const visiblePassedCount = results.filter((r) => r.isCorrect).length;
+    await CrackCodeAttempt.create({
+      teamId,
+      crackCodeSessionId: session._id,
+      input: `${question.id} [${language}]`,
+      code,
+      output: `visible ${visiblePassedCount}/${results.length}, hidden ${
+        hiddenPassed === null ? "not run" : hiddenPassed ? "passed" : "failed"
+      }`,
+      attemptNumber: session.attemptsUsed,
+    });
+
+    return res.json({
+      results,
+      hiddenPassed,
+      validated: passedEverything,
+      attemptsUsed: session.attemptsUsed,
+    });
+  } catch (error) {
+    console.error("CrackCode RUN error:", error.message);
+    if (error.code === "EXECUTOR_BUSY") {
+      return res.status(503).json({ message: "Code executor is busy. Please run again in a few seconds." });
+    }
+    return res.status(500).json({ message: "Error executing code", error: error.message });
+  }
+});
+
+/*
+  POST /crack-code/submit
+  Body: { teamId, sessionId, submittedLogic, language, autoSubmit }
+
+  Correctness is decided by the server: the submitted code must be exactly the
+  code that last passed every visible and hidden test case via /run.
+*/
 router.post("/submit", async (req, res) => {
   try {
-    const { teamId, sessionId, submittedLogic, isCorrect: providedIsCorrect } = req.body;
+    const { teamId, sessionId, submittedLogic, language, autoSubmit } = req.body || {};
 
     if (!teamId || !sessionId || !submittedLogic) {
       return res.status(400).json({ message: "Missing required fields" });
     }
-
-    // --- GLITCH ENFORCEMENT ---
-    const GameState = require("../../model/gameState.model");
-    const state = await GameState.findOne({ key: 'GLOBAL_STATE' });
-    if (state && state.glitchActiveUntil && new Date() < new Date(state.glitchActiveUntil)) {
-      if (state.firstBloodTeamId && state.firstBloodTeamId.toString() !== teamId) {
-        return res.status(403).json({
-          success: false,
-          message: "SYSTEM GLITCH ACTIVE - ACCESS DENIED"
-        });
-      }
+    if (!mongoose.Types.ObjectId.isValid(teamId) || !mongoose.Types.ObjectId.isValid(sessionId)) {
+      return res.status(400).json({ message: "Invalid teamId or sessionId" });
     }
-    // --------------------------
 
-    // Default to true if not provided (to maintain backward compatibility for manual submits)
-    const isCorrect = providedIsCorrect !== undefined ? providedIsCorrect : true;
+    if (await isGlitchBlocked(teamId)) {
+      return res.status(403).json({ success: false, message: "SYSTEM GLITCH ACTIVE - ACCESS DENIED" });
+    }
+
+    const session = await CrackCodeSession.findOne({ _id: sessionId, teamId });
+    if (!session) {
+      return res.status(404).json({ message: "Session not found for this team" });
+    }
+
+    // Timer expiry auto-submits are never counted as a crack
+    const isCorrect =
+      !autoSubmit &&
+      !!session.validatedCodeHash &&
+      session.validatedCodeHash === hashSubmission(language, submittedLogic);
 
     // 1. Check if CURRENT team already submitted
     const existing = await CrackCodeSubmission.findOne({ teamId, crackCodeSessionId: sessionId });

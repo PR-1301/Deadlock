@@ -8,6 +8,11 @@ const CrackCodeAdmin = () => {
     const [eligibleCount, setEligibleCount] = useState(0);
     const [isSessionActive, setIsSessionActive] = useState(false);
     const [winnerInfo, setWinnerInfo] = useState(null);
+    const [questions, setQuestions] = useState([]);
+    const [selectedQuestionId, setSelectedQuestionId] = useState(null);
+    const [activeQuestionId, setActiveQuestionId] = useState(null);
+    const [questionError, setQuestionError] = useState(null);
+    const [questionsUnavailable, setQuestionsUnavailable] = useState(false);
 
     React.useEffect(() => {
         document.title = "Crack Code // Admin";
@@ -22,6 +27,18 @@ const CrackCodeAdmin = () => {
                 const statusRes = await fetch(`${BASE_URL}/api/public/crack-code/global-status`);
                 const statusData = await statusRes.json();
                 setIsSessionActive(statusData.started);
+
+                // Question bank + current selection
+                const questionsRes = await fetch(`${BASE_URL}/api/admin/crack-code/questions`);
+                if (questionsRes.ok) {
+                    const questionsData = await questionsRes.json();
+                    setQuestions(questionsData.questions || []);
+                    setSelectedQuestionId(questionsData.selectedQuestionId);
+                    setActiveQuestionId(questionsData.activeQuestionId);
+                    setQuestionsUnavailable(false);
+                } else {
+                    setQuestionsUnavailable(true);
+                }
 
                 // Fetch winner info if session is active
                 if (statusData.started) {
@@ -44,7 +61,33 @@ const CrackCodeAdmin = () => {
         return () => clearInterval(interval);
     }, []);
 
+    const handleSelectQuestion = async (questionId) => {
+        if (isSessionActive || questionId === selectedQuestionId) return;
+        const previous = selectedQuestionId;
+        setSelectedQuestionId(questionId); // optimistic
+        setQuestionError(null);
+        try {
+            const response = await fetch(`${BASE_URL}/api/admin/crack-code/question`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ questionId })
+            });
+            if (!response.ok) {
+                const data = await response.json().catch(() => ({}));
+                setSelectedQuestionId(previous);
+                setQuestionError(data.message || 'QUESTION SELECTION REJECTED.');
+            }
+        } catch {
+            setSelectedQuestionId(previous);
+            setQuestionError('NETWORK INTERRUPT: SELECTION FAILED.');
+        }
+    };
+
     const handleStartSession = async () => {
+        if (!selectedQuestionId) {
+            setStatus({ type: 'error', message: 'SELECT A QUESTION BEFORE STARTING.' });
+            return;
+        }
         setLoading(true);
         setStatus({ type: 'info', message: 'INJECTING SESSION DATA...' });
 
@@ -53,7 +96,8 @@ const CrackCodeAdmin = () => {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
-                }
+                },
+                body: JSON.stringify({ questionId: selectedQuestionId })
             });
 
             const data = await response.json();
@@ -120,13 +164,54 @@ const CrackCodeAdmin = () => {
                             <span className="label">ELIGIBLE TEAMS:</span>
                             <span className="value">{eligibleCount}</span>
                         </div>
+                        <div className="status-item">
+                            <span className="label">{isSessionActive ? 'LIVE QUESTION:' : 'QUEUED QUESTION:'}</span>
+                            <span className="value">
+                                {questions.find(q => q.id === (isSessionActive ? activeQuestionId : selectedQuestionId))?.title || '—'}
+                            </span>
+                        </div>
+                    </div>
+
+                    <div className="question-selector">
+                        <div className="question-selector-header">
+                            <span>ROUND PAYLOAD // SELECT QUESTION</span>
+                            {isSessionActive && <span className="question-lock">LOCKED: RESET TO CHANGE</span>}
+                        </div>
+                        <div className="question-options" role="radiogroup" aria-label="Crack the Code question">
+                            {questions.map((q) => {
+                                const isSelected = q.id === (isSessionActive ? activeQuestionId : selectedQuestionId);
+                                return (
+                                    <button
+                                        key={q.id}
+                                        type="button"
+                                        role="radio"
+                                        aria-checked={isSelected}
+                                        className={`question-option ${isSelected ? 'selected' : ''}`}
+                                        onClick={() => handleSelectQuestion(q.id)}
+                                        disabled={loading || isSessionActive}
+                                    >
+                                        <span className="question-option-title">{q.title}</span>
+                                        <span className="question-option-meta">
+                                            {q.visibleCount} VISIBLE · {q.hiddenCount} HIDDEN
+                                        </span>
+                                    </button>
+                                );
+                            })}
+                        </div>
+                        {questionsUnavailable && (
+                            <div className="question-error">
+                                QUESTION BANK UNREACHABLE AT {BASE_URL}. THE BACKEND MAY BE RUNNING AN OLDER BUILD.
+                            </div>
+                        )}
+                        {questionError && <div className="question-error">{questionError}</div>}
+                        {status?.type === 'error' && <div className="question-error">{status.message}</div>}
                     </div>
 
                     <div className="main-action">
                         <button
                             className={`deploy-button ${loading ? 'loading' : ''} ${isSessionActive ? 'disabled' : ''}`}
                             onClick={handleStartSession}
-                            disabled={loading || isSessionActive}
+                            disabled={loading || isSessionActive || !selectedQuestionId}
                         >
                             <span className="btn-glitch-bg"></span>
                             <span className="btn-text">{loading ? 'BOOTING...' : (isSessionActive ? 'SESSION IN PROGRESS' : 'START SESSION')}</span>
