@@ -1,405 +1,208 @@
 /* ============================
-   FONT IMPORTS
+   FONT IMPORTS & CSS VARIABLES
+   Design reference from NoCapJustCode
 ============================ */
-@import url("https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700;900&family=Rajdhani:wght@400;500;600;700&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700;800;900&family=Rajdhani:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700;800&display=swap");
+
+:root {
+  --bg-base: #050507;
+  --accent-orange: #F57546;
+  --accent-orange-grid: #C95228;
+  --accent-cream: #F9EDD2;
+  --accent-yellow: #FAA012;
+  --accent-green: #3DDC84;
+  --text-primary: #F9EDD2;
+  --text-muted: #D8CCAE;
+  --surface-card: rgba(20, 20, 24, 0.75);
+  --border-subtle: rgba(247, 237, 216, 0.12);
+  --font-mono: 'JetBrains Mono', 'Fira Code', 'Courier New', monospace;
+  --font-display: 'Orbitron', 'Rajdhani', sans-serif;
+}
 
 /* ============================
-   SCOPED CONTAINER
-============================ */
-/* ============================
-   SCOPED CONTAINER
+   SCOPED CONTAINER (#login-page)
 ============================ */
 #login-page {
   position: relative;
   width: 100vw;
-  height: 100vh;
+  min-height: 100vh;
   margin: 0;
   padding: 0;
-  background-color: #050505;
-  /* Stronger radial gradient following mouse */
+  background-color: var(--bg-base);
+  /* Clean deep background with edge vignette & subtle micro dot texture (NO yellow gradient) */
   background-image:
-    radial-gradient(circle at var(--mouse-x, 50%) var(--mouse-y, 50%),
-      rgba(255, 215, 0, 0.15) 0%,
-      transparent 50%),
-    linear-gradient(rgba(255, 215, 0, 0.05) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255, 215, 0, 0.05) 1px, transparent 1px);
-  background-size: 100% 100%, 50px 50px, 50px 50px;
-  color: #e0e0e0;
-  font-family: "Rajdhani", sans-serif;
-  overflow: hidden;
+    radial-gradient(ellipse at center, transparent 35%, rgba(0, 0, 0, 0.95) 100%),
+    radial-gradient(rgba(247, 237, 216, 0.05) 1px, transparent 1px);
+  background-size: 100% 100%, 24px 24px;
+  color: var(--text-primary);
+  font-family: var(--font-display);
+  overflow-x: hidden;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  perspective: 1000px;
-}
-
-/* More visible animated digital rain/noise effect */
-#login-page::before {
-  content: "";
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: repeating-linear-gradient(0deg,
-      transparent 0,
-      transparent 50px,
-      rgba(255, 215, 0, 0.05) 50px,
-      rgba(255, 215, 0, 0.05) 51px);
-  background-size: 100% 51px;
-  animation: scanline 8s linear infinite;
-  pointer-events: none;
-  z-index: 0;
-}
-
-/* Floating interactive particles */
-#login-page::after {
-  content: "";
-  position: absolute;
-  width: 200%;
-  height: 200%;
-  top: -50%;
-  left: -50%;
-  background-image: radial-gradient(circle, rgba(255, 255, 255, 0.1) 1px, transparent 1px);
-  background-size: 60px 60px;
-  transform: rotate(20deg);
-  animation: floatingParticles 60s linear infinite;
-  opacity: 0.4;
-  pointer-events: none;
-  z-index: 1;
-}
-
-@keyframes scanline {
-  0% {
-    transform: translateY(0);
-  }
-
-  100% {
-    transform: translateY(100vh);
-  }
-}
-
-@keyframes floatingParticles {
-  0% {
-    transform: rotate(20deg) translateY(0);
-  }
-
-  100% {
-    transform: rotate(20deg) translateY(-100px);
-  }
-}
-
-@keyframes cosmicGrid {
-  0% {
-    transform: rotateX(45deg) translateY(0);
-  }
-
-  100% {
-    transform: rotateX(45deg) translateY(-50%);
-  }
-}
-
-@keyframes pulseGlow {
-  0% {
-    opacity: 0.5;
-    transform: translate(-50%, -50%) scale(0.8);
-  }
-
-  100% {
-    opacity: 0.8;
-    transform: translate(-50%, -50%) scale(1.2);
-  }
 }
 
 /* ============================
-  HEADER BRANDS
+  HEADER NAVBAR
 ============================ */
 #login-page .login-header {
   position: absolute;
-  top: 40px;
-  width: 90%;
+  top: 1.5rem;
+  left: 1.5rem;
+  right: 1.5rem;
   display: flex;
-  justify-content: center;
+  justify-content: space-between;
   align-items: center;
-  z-index: 10;
-}
-
-#login-page .brand-left,
-#login-page .brand-right {
-  font-family: "Orbitron", sans-serif;
-  font-size: 24px;
-  font-weight: 700;
-  letter-spacing: 2px;
-  text-transform: uppercase;
-  color: #fff;
-  text-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
-  display: flex;
-  align-items: center;
-  gap: 15px;
+  z-index: 20;
 }
 
 #login-page .brand-left {
-  color: #ffd700;
-  /* Gold */
-  text-shadow: 0 0 15px rgba(255, 215, 0, 0.6);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-family: var(--font-display);
+  font-size: 1.25rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  color: var(--accent-cream);
+  text-decoration: none;
 }
 
-#login-page .brand-logo {
-  height: 80px;
-  /* Increased size */
+#login-page .celestius-brand-logo {
+  height: 36px;
   width: auto;
-  filter: drop-shadow(0 0 8px rgba(255, 215, 0, 0.8));
-  transition: transform 0.3s ease;
+  border-radius: 9999px;
+  filter: drop-shadow(0 0 12px rgba(250, 160, 18, 0.5));
+  transition: transform 0.25s ease;
 }
 
-#login-page .brand-logo:hover {
-  transform: scale(1.1) rotate(5deg);
+#login-page .celestius-brand-logo:hover {
+  transform: scale(1.05);
 }
 
-#login-page .brand-right {
-  color: #a0d8ef;
-  /* Light Blue */
-  text-shadow: 0 0 15px rgba(160, 216, 239, 0.6);
+#login-page .brand-text {
+  font-size: 1.15rem;
+  letter-spacing: 0.12em;
+  color: var(--accent-cream);
+  text-shadow: 0 0 15px rgba(247, 237, 216, 0.4);
+}
+
+#login-page .event-badge {
+  font-family: var(--font-mono);
+  font-size: 0.8125rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  color: var(--accent-orange);
+  background: rgba(20, 20, 24, 0.75);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(245, 117, 70, 0.35);
+  padding: 8px 18px;
+  border-radius: 9999px;
+  box-shadow: 0 0 20px rgba(245, 117, 70, 0.15);
+  text-transform: uppercase;
 }
 
 /* ============================
    MAIN CONTENT
 ============================ */
 #login-page .login-content {
-  z-index: 5;
+  position: relative;
+  z-index: 10;
   width: 100%;
-  max-width: 800px;
+  max-width: 860px;
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 20px;
-  animation: fadeIn 1.2s ease-out;
+  padding: 2.5rem 1.5rem;
+  animation: fadeIn 0.6s ease-out;
 }
 
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(20px);
-  }
-
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+/* ============================
+   EVENT TITLE BANNER & LOGO
+   Large crisp ImageTypewriter above Team Name (NO yellow gradient)
+============================ */
+#login-page .event-title-banner-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: 2.2rem;
+  width: 100%;
 }
 
-#login-page .main-title {
-  font-family: "Orbitron", sans-serif;
-  font-size: 80px;
-  font-weight: 900;
-  letter-spacing: 12px;
-  color: transparent;
-  -webkit-text-stroke: 2px #d4af37;
-  text-transform: uppercase;
-  margin-bottom: 60px;
-  position: relative;
-  text-shadow: 0 0 20px rgba(212, 175, 55, 0.3);
+.logo-typewriter-wrapper {
+  width: 100%;
+  max-width: 780px;
+  aspect-ratio: 840 / 328;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  /* Clean contrast shadow without yellow gradient */
+  filter: drop-shadow(0 8px 30px rgba(0, 0, 0, 0.95));
+  transition: transform 0.3s ease;
+}
+
+.logo-typewriter-wrapper:hover {
+  transform: scale(1.02);
 }
 
 /* ============================
    INPUT GROUPS
 ============================ */
-/* ============================
-   INPUT GROUPS (CYBER INTERACTIVE)
-============================ */
 #login-page .cyber-input-group {
   position: relative;
   width: 100%;
-  max-width: 600px;
-  margin-bottom: 50px;
+  max-width: 520px;
+  margin-bottom: 2rem;
 }
 
 #login-page .team-input {
   width: 100%;
-  background: rgba(10, 10, 10, 0.6);
-  border: none;
-  border-bottom: 2px solid #555;
-  padding: 20px 10px;
-  font-family: "Orbitron", sans-serif;
-  font-size: 24px;
-  color: #fff;
+  background: rgba(20, 20, 24, 0.75);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+  padding: 16px 20px;
+  font-family: var(--font-mono);
+  font-size: 1.15rem;
+  font-weight: 600;
+  color: var(--accent-cream);
   text-align: center;
-  letter-spacing: 2px;
-  /* Removed uppercase transform */
-  transition: all 0.3s ease;
-  z-index: 10;
-  position: relative;
-}
-
-/* ... existing styles ... */
-
-/* ============================
-   REDIRECT OVERLAY
-============================ */
-#redirect-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100vw;
-  height: 100vh;
-  background-color: #000;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  z-index: 10001;
-  /* Above notifications */
-  animation: fadeInOverlay 0.5s ease-out;
-}
-
-.redirect-content {
-  text-align: center;
-  color: #00ff9d;
-  /* Success Green */
-}
-
-.redirect-title {
-  font-family: "Orbitron", sans-serif;
-  font-size: 48px;
-  font-weight: 700;
-  letter-spacing: 8px;
-  margin-bottom: 20px;
-  text-shadow: 0 0 20px rgba(0, 255, 157, 0.6);
-  animation: pulseGreen 1s infinite alternate;
-}
-
-.redirect-spinner {
-  width: 60px;
-  height: 60px;
-  border: 4px solid rgba(0, 255, 157, 0.3);
-  border-top-color: #00ff9d;
-  border-radius: 50%;
-  animation: spin 1s linear infinite;
-  margin-bottom: 30px;
-}
-
-@keyframes fadeInOverlay {
-  from {
-    opacity: 0;
-  }
-
-  to {
-    opacity: 1;
-  }
-}
-
-@keyframes pulseGreen {
-  from {
-    text-shadow: 0 0 10px rgba(0, 255, 157, 0.4);
-    opacity: 0.8;
-  }
-
-  to {
-    text-shadow: 0 0 30px rgba(0, 255, 157, 0.9);
-    opacity: 1;
-  }
-}
-
-@keyframes spin {
-  to {
-    transform: rotate(360deg);
-  }
+  letter-spacing: 0.1em;
+  transition: all 0.25s ease;
+  box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.8);
 }
 
 #login-page .team-input:focus {
   outline: none;
-  background: rgba(20, 20, 20, 0.8);
-  border-bottom-color: transparent;
-  /* Handled by bar */
+  border-color: var(--accent-orange);
+  box-shadow: 0 0 20px rgba(245, 117, 70, 0.25), inset 0 2px 6px rgba(0, 0, 0, 0.8);
+  background: rgba(26, 26, 32, 0.85);
 }
 
-#login-page .team-input:hover {
-  background: rgba(30, 30, 30, 0.9);
-  border-bottom-color: #ffd700;
-  box-shadow: 0 0 15px rgba(255, 215, 0, 0.3);
-  cursor: text;
+#login-page .team-input::placeholder {
+  color: rgba(216, 204, 174, 0.4);
+  font-family: var(--font-mono);
+  font-size: 0.95rem;
+  letter-spacing: 0.08em;
 }
 
-/* Floating Label */
-#login-page .input-label {
-  position: absolute;
-  top: 20px;
-  left: 0;
-  width: 100%;
+#login-page .team-status-indicator {
+  margin-top: 8px;
   text-align: center;
-  color: #888;
-  font-family: "Orbitron", sans-serif;
-  font-size: 20px;
-  letter-spacing: 2px;
-  transition: 0.3s ease all;
-  pointer-events: none;
-  z-index: 20;
+  font-family: var(--font-mono);
+  font-size: 0.8125rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: var(--accent-green);
+  text-shadow: 0 0 10px rgba(61, 220, 132, 0.5);
 }
 
-/* Float up when focused or has content (valid) */
-#login-page .team-input:focus~.input-label,
-#login-page .team-input:valid~.input-label {
-  top: -15px;
-  font-size: 14px;
-  color: #ffd700;
-  text-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
-  letter-spacing: 4px;
-}
-
-/* Animated Bottom Bar */
-#login-page .input-bar {
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  height: 2px;
-  width: 100%;
-  background: #555;
-  display: block;
-}
-
-#login-page .input-bar::before,
-#login-page .input-bar::after {
-  content: '';
-  position: absolute;
-  bottom: 0;
-  width: 0;
-  height: 2px;
-  background: #ffd700;
-  transition: 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
-  box-shadow: 0 0 15px rgba(255, 215, 0, 0.8);
-}
-
-#login-page .input-bar::before {
-  left: 50%;
-}
-
-#login-page .input-bar::after {
-  right: 50%;
-}
-
-/* Expand bar from center on focus */
-#login-page .team-input:focus~.input-bar::before,
-#login-page .team-input:focus~.input-bar::after {
-  width: 50%;
-}
-
-/* Highlight/Scan effect */
-#login-page .input-highlight {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 0;
-  height: 100%;
-  background: linear-gradient(90deg, transparent, rgba(255, 215, 0, 0.1), transparent);
-  transition: 0.5s;
-  pointer-events: none;
-  z-index: 5;
-}
-
-#login-page .team-input:focus~.input-highlight {
-  width: 100%;
-  transition: 0.5s ease;
+#login-page .team-status-indicator.available {
+  color: var(--accent-yellow);
+  text-shadow: 0 0 10px rgba(250, 160, 18, 0.5);
 }
 
 /* ============================
@@ -407,88 +210,135 @@
 ============================ */
 #login-page .operatives-section {
   width: 100%;
-  max-width: 700px;
+  max-width: 620px;
   display: flex;
   flex-direction: column;
   align-items: center;
-  margin-bottom: 50px;
+  margin-bottom: 2.2rem;
+  transition: opacity 0.3s ease;
+}
+
+#login-page .operatives-section.hidden {
+  display: none;
 }
 
 #login-page .section-label {
-  font-family: "Orbitron", sans-serif;
-  font-size: 14px;
-  letter-spacing: 4px;
-  color: #666;
-  margin-bottom: 20px;
+  font-family: var(--font-mono);
+  font-size: 0.8125rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  color: var(--text-muted);
+  margin-bottom: 14px;
   text-transform: uppercase;
+  opacity: 0.85;
 }
 
 #login-page .operatives-grid {
   display: flex;
-  justify-content: center;
-  gap: 20px;
+  gap: 12px;
   width: 100%;
-  flex-wrap: wrap;
 }
 
 #login-page .operative-card {
   flex: 1;
-  min-width: 180px;
-  max-width: 220px;
-  /* Fix: Prevent 3rd item from stretching too wide */
-  background: rgba(20, 20, 20, 0.6);
-  border: 1px solid #333;
-  padding: 15px 20px;
-  border-radius: 12px;
+  background: rgba(20, 20, 24, 0.7);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+  padding: 10px 14px;
   display: flex;
   align-items: center;
-  gap: 15px;
-  transition: all 0.3s ease;
-  position: relative;
-  overflow: hidden;
+  gap: 10px;
+  transition: all 0.2s ease;
 }
 
 #login-page .operative-card:hover,
 #login-page .operative-card:focus-within {
-  border-color: #555;
-  background: rgba(30, 30, 30, 0.8);
+  border-color: var(--accent-orange);
+  background: rgba(26, 26, 32, 0.85);
   transform: translateY(-2px);
-  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.6), 0 0 12px rgba(245, 117, 70, 0.15);
 }
 
 #login-page .op-number {
-  font-family: "Orbitron", sans-serif;
-  font-size: 20px;
-  color: #ffd700;
-  font-weight: 700;
-  opacity: 0.8;
+  font-family: var(--font-mono);
+  font-size: 0.8125rem;
+  font-weight: 800;
+  color: var(--accent-orange);
+  background: rgba(245, 117, 70, 0.12);
+  padding: 4px 8px;
+  border-radius: 4px;
 }
 
 #login-page .operative-input {
   background: transparent;
   border: none;
-  border-bottom: 1px solid transparent;
-  color: #bbb;
-  font-family: "Rajdhani", sans-serif;
-  font-size: 18px;
+  outline: none;
+  color: var(--accent-cream);
+  font-family: var(--font-mono);
+  font-size: 0.9375rem;
+  font-weight: 500;
   width: 100%;
-  padding: 5px;
-  text-align: left;
-  box-shadow: none !important;
-  /* Override global input styles */
-}
-
-#login-page .operative-input:focus {
-  background: transparent;
-  border-bottom: 1px solid #ffd700;
-  color: #fff;
   box-shadow: none !important;
 }
 
 #login-page .operative-input::placeholder {
-  color: #444;
-  font-family: "Rajdhani", sans-serif;
-  text-transform: none;
+  color: rgba(216, 204, 174, 0.35);
+  font-family: var(--font-mono);
+  font-size: 0.875rem;
+}
+
+/* ============================
+   DEPLOY BUTTON
+============================ */
+#login-page .deploy-btn {
+  height: 50px;
+  padding: 0 2.8rem;
+  background-color: var(--accent-orange);
+  color: #050507;
+  border: 1px solid var(--accent-orange);
+  border-radius: 8px;
+  font-family: var(--font-mono);
+  font-size: 0.9375rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  cursor: pointer;
+  box-shadow: 0 4px 20px rgba(245, 117, 70, 0.35);
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+#login-page .deploy-btn:hover {
+  background-color: #ff8558;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 30px rgba(245, 117, 70, 0.55);
+}
+
+#login-page .deploy-btn:active {
+  transform: translateY(0);
+}
+
+#login-page .deploy-btn.resume-mode {
+  background-color: var(--accent-green);
+  border-color: var(--accent-green);
+  color: #050507;
+  box-shadow: 0 4px 20px rgba(61, 220, 132, 0.35);
+}
+
+#login-page .deploy-btn.resume-mode:hover {
+  background-color: #55f099;
+  box-shadow: 0 6px 30px rgba(61, 220, 132, 0.55);
+}
+
+#login-page .deploy-btn:disabled,
+#login-page .deploy-btn.deploying {
+  opacity: 0.65;
+  cursor: not-allowed;
+  transform: none !important;
 }
 
 /* ============================
@@ -496,49 +346,39 @@
 ============================ */
 .cyber-notification {
   position: fixed;
-  top: 30px;
+  top: 2rem;
   left: 50%;
   transform: translateX(-50%);
-  background: rgba(15, 5, 5, 0.95);
-  border: 1px solid #ff003c;
-  border-left: 4px solid #ff003c;
-  color: #ff003c;
-  padding: 20px 30px;
-  font-family: "Orbitron", sans-serif;
-  font-size: 16px;
-  letter-spacing: 1px;
+  background: rgba(20, 20, 24, 0.95);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(245, 117, 70, 0.4);
+  color: var(--accent-orange);
+  padding: 12px 26px;
+  font-family: var(--font-mono);
+  font-size: 0.875rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  border-radius: 9999px;
   z-index: 10000;
-  box-shadow: 0 0 20px rgba(255, 0, 60, 0.3);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.8), 0 0 20px rgba(245, 117, 70, 0.2);
   display: flex;
   align-items: center;
-  gap: 15px;
-  -webkit-backdrop-filter: blur(5px);
-  backdrop-filter: blur(5px);
-  animation: slideInDown 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-  clip-path: polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px);
+  gap: 10px;
+  animation: slideInDown 0.35s ease-out;
 }
 
 .cyber-notification.success {
-  border-color: #00ff9d;
-  color: #00ff9d;
-  box-shadow: 0 0 20px rgba(0, 255, 157, 0.3);
-}
-
-.cyber-notification::before {
-  content: "⚠";
-  font-size: 24px;
-}
-
-.cyber-notification.success::before {
-  content: "✓";
+  border-color: rgba(61, 220, 132, 0.5);
+  color: var(--accent-green);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.8), 0 0 20px rgba(61, 220, 132, 0.2);
 }
 
 @keyframes slideInDown {
   from {
-    transform: translate(-50%, -100px);
+    transform: translate(-50%, -40px);
     opacity: 0;
   }
-
   to {
     transform: translate(-50%, 0);
     opacity: 1;
@@ -546,690 +386,80 @@
 }
 
 /* ============================
-   DEPLOY BUTTON
+   REDIRECT OVERLAY
 ============================ */
-#login-page .deploy-btn {
-  background: transparent;
-  border: 2px solid #ffd700;
-  color: #ffd700;
-  padding: 18px 50px;
-  font-family: "Orbitron", sans-serif;
-  font-size: 18px;
-  font-weight: 700;
-  letter-spacing: 3px;
+#redirect-overlay {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  background-color: var(--bg-base);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 10001;
+  animation: fadeIn 0.4s ease-out;
+}
+
+.redirect-content {
+  text-align: center;
+  color: var(--accent-green);
+}
+
+.glitch-text {
+  font-family: var(--font-display);
+  font-size: clamp(1.8rem, 5vw, 3.5rem);
+  font-weight: 800;
+  letter-spacing: 0.15em;
   text-transform: uppercase;
-  cursor: pointer;
-  position: relative;
-  overflow: hidden;
-  transition: all 0.3s ease;
-  box-shadow: 0 0 15px rgba(255, 215, 0, 0.1);
-  border-radius: 4px;
+  text-shadow: 0 0 25px rgba(61, 220, 132, 0.7);
 }
 
-#login-page .deploy-btn::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: -100%;
-  width: 100%;
-  height: 100%;
-  background: linear-gradient(90deg, transparent, rgba(255, 215, 0, 0.2), transparent);
-  transition: 0.5s;
+/* Animations */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
-#login-page .deploy-btn:hover {
-  background: rgba(255, 215, 0, 0.1);
-  box-shadow: 0 0 30px rgba(255, 215, 0, 0.4);
-  transform: scale(1.02);
-}
-
-#login-page .deploy-btn:hover::before {
-  left: 100%;
-}
-
-#login-page .deploy-btn:active {
-  transform: scale(0.98);
-}
-
-#login-page .deploy-btn:disabled,
-#login-page .deploy-btn.deploying {
-  border-color: #555;
-  color: #666;
-  cursor: not-allowed;
-  opacity: 0.7;
-  transform: none !important;
-  box-shadow: none;
-  background: rgba(40, 40, 40, 0.4);
-}
-
-#login-page .deploy-btn.deploying::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: -100%;
-  width: 100%;
-  height: 100%;
-  background: linear-gradient(90deg, transparent, rgba(255, 215, 0, 0.4), transparent);
-  animation: scanning 1.5s infinite;
-}
-
-@keyframes scanning {
-  0% {
-    left: -100%;
-  }
-
-  100% {
-    left: 100%;
-  }
+@keyframes cursorBlink {
+  from { opacity: 1; }
+  to { opacity: 0.15; }
 }
 
 /* ============================
-   RESPONSIVE
+   RESPONSIVENESS
 ============================ */
-@media (max-width: 768px) {
-  #login-page .main-title {
-    font-size: 50px;
-    -webkit-text-stroke: 1px #d4af37;
+@media (max-width: 640px) {
+  #login-page .login-header {
+    top: 1rem;
+    left: 1rem;
+    right: 1rem;
   }
 
-  #login-page .login-header {
-    flex-direction: column;
-    gap: 15px;
+  #login-page .brand-left {
+    font-size: 1rem;
+  }
+
+  #login-page .celestius-brand-logo {
+    height: 28px;
+  }
+
+  #login-page .event-badge {
+    font-size: 0.7rem;
+    padding: 6px 12px;
   }
 
   #login-page .operatives-grid {
     flex-direction: column;
+    gap: 8px;
   }
 
   #login-page .operative-card {
     width: 100%;
   }
 
-}
-
-/* ============================
-   CINEMATIC FULL-SCREEN LOADER
-============================ */
-#login-loading-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100vw;
-  height: 100vh;
-  background-color: #020202;
-  /* Stronger, noticeable grid with fluid motion */
-  background-image:
-    radial-gradient(circle at 50% 50%, rgba(255, 215, 0, 0.15) 0%, transparent 70%),
-    linear-gradient(0deg, transparent 48%, rgba(255, 215, 0, 0.15) 50%, transparent 52%),
-    linear-gradient(90deg, transparent 48%, rgba(255, 215, 0, 0.15) 50%, transparent 52%);
-  background-size: 100% 100%, 80px 80px, 80px 80px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 9999;
-  animation: cyberFlow 4s linear infinite;
-  box-shadow: inset 0 0 100px #000;
-}
-
-@keyframes cyberFlow {
-  0% {
-    background-position: center, 0 0, 0 0;
+  #login-page .deploy-btn {
+    width: 100%;
   }
-
-  100% {
-    background-position: center, 0 80px, 80px 0;
-  }
-}
-
-.hologram-container {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  width: 100%;
-  height: 100%;
-  gap: 40px;
-  /* Removed border/box shadow for full-page feel */
-}
-
-/* Authentic Large Logo */
-.loading-logo-glow {
-  width: 250px;
-  /* Increased size */
-  height: auto;
-  filter: drop-shadow(0 0 30px rgba(255, 215, 0, 0.4));
-  animation: breathe 1.3s ease-in-out infinite alternate;
-}
-
-@keyframes breathe {
-  0% {
-    transform: scale(0.98);
-    filter: drop-shadow(0 0 10px rgba(255, 215, 0, 0.2)) drop-shadow(0 0 20px rgba(255, 215, 0, 0.1));
-  }
-
-  100% {
-    transform: scale(1.15);
-    filter: drop-shadow(0 0 30px rgba(255, 215, 0, 0.6)) drop-shadow(0 0 60px rgba(255, 215, 0, 0.4)) drop-shadow(0 0 100px rgba(255, 215, 0, 0.2));
-  }
-}
-
-/* Cinematic Title */
-.cinematic-title {
-  font-family: "Orbitron", sans-serif;
-  font-size: 96px;
-  /* Massive Font */
-  font-weight: 900;
-  letter-spacing: 20px;
-  color: #fff;
-  text-transform: uppercase;
-  margin: 0;
-  text-shadow: 0 0 40px rgba(255, 215, 0, 0.5);
-  animation: textGlow 3s infinite alternate;
-}
-
-@keyframes textGlow {
-  0% {
-    text-shadow: 0 0 20px rgba(255, 215, 0, 0.3);
-    opacity: 0.9;
-  }
-
-  100% {
-    text-shadow: 0 0 60px rgba(255, 215, 0, 0.8);
-    opacity: 1;
-  }
-}
-
-/* Text Container */
-.loading-text-container {
-  margin-top: 20px;
-}
-
-#login-page .loading-text {
-  font-family: "Rajdhani", sans-serif;
-  font-size: 28px;
-  /* Larger Font */
-  font-weight: 600;
-  letter-spacing: 6px;
-  color: #00f3ff;
-  text-transform: uppercase;
-  animation: none;
-  /* Explicitly disable any leaked animations */
-}
-
-/* Authentic Progress Bar */
-.cyber-progress-container {
-  width: 60%;
-  /* Use more page width */
-  max-width: 800px;
-  height: 6px;
-  background: #111;
-  border-radius: 4px;
-  margin-top: 30px;
-  overflow: hidden;
-  box-shadow: 0 0 20px #000;
-}
-
-/* Progress Bar Fill */
-.cyber-progress-bar {
-  height: 100%;
-  background: #ffd700;
-  width: 0%;
-  box-shadow: 0 0 25px #ffd700;
-  transition: width 0.1s linear;
-}
-
-/* ============================
-   REVEAL ANIMATIONS (3D Fly-In)
-============================ */
-/* Initial state of login content */
-#login-page .login-content {
-  opacity: 0;
-  transform: perspective(1000px) translateZ(-100px) rotateX(20deg);
-  transition: opacity 1s ease, transform 1s cubic-bezier(0.2, 0.8, 0.2, 1);
-}
-
-#login-page .login-header {
-  transform: translateY(-100%);
-  opacity: 0;
-  transition: all 0.8s ease 0.5s;
-}
-
-/* Revealed State */
-#login-page.loaded .login-content {
-  opacity: 1;
-  transform: perspective(1000px) translateZ(0) rotateX(0);
-}
-
-#login-page.loaded .login-header {
-  transform: translateY(0);
-  opacity: 1;
-}
-
-/* Animations */
-@keyframes spinRight {
-  100% {
-    transform: rotate(360deg);
-  }
-}
-
-@keyframes spinLeft {
-  100% {
-    transform: rotate(-360deg);
-  }
-}
-
-@keyframes corePulse {
-  0% {
-    box-shadow: 0 0 20px 5px rgba(255, 255, 255, 0.5);
-    opacity: 0.8;
-  }
-
-  100% {
-    box-shadow: 0 0 50px 20px rgba(255, 255, 255, 0.9);
-    opacity: 1;
-  }
-}
-
-@keyframes loadingScan {
-  0% {
-    transform: translateX(-100%);
-  }
-
-  100% {
-    transform: translateX(100%);
-  }
-}
-
-@keyframes glitch-anim {
-  0% {
-    clip: rect(13px, 9999px, 81px, 0);
-    transform: skew(0.81deg);
-  }
-
-  5% {
-    clip: rect(69px, 9999px, 8px, 0);
-    transform: skew(0.12deg);
-  }
-
-  10% {
-    clip: rect(31px, 9999px, 98px, 0);
-    transform: skew(0.48deg);
-  }
-
-  15% {
-    clip: rect(93px, 9999px, 34px, 0);
-    transform: skew(0.85deg);
-  }
-
-  20% {
-    clip: rect(10px, 9999px, 60px, 0);
-    transform: skew(0.14deg);
-  }
-
-  25% {
-    clip: rect(21px, 9999px, 5px, 0);
-    transform: skew(0.96deg);
-  }
-
-  30% {
-    clip: rect(87px, 9999px, 94px, 0);
-    transform: skew(0.36deg);
-  }
-
-  35% {
-    clip: rect(2px, 9999px, 12px, 0);
-    transform: skew(0.72deg);
-  }
-
-  40% {
-    clip: rect(65px, 9999px, 26px, 0);
-    transform: skew(0.04deg);
-  }
-
-  45% {
-    clip: rect(44px, 9999px, 55px, 0);
-    transform: skew(0.68deg);
-  }
-
-  50% {
-    clip: rect(82px, 9999px, 7px, 0);
-    transform: skew(0.55deg);
-  }
-
-  55% {
-    clip: rect(15px, 9999px, 86px, 0);
-    transform: skew(0.24deg);
-  }
-
-  60% {
-    clip: rect(39px, 9999px, 49px, 0);
-    transform: skew(0.78deg);
-  }
-
-  65% {
-    clip: rect(76px, 9999px, 19px, 0);
-    transform: skew(0.92deg);
-  }
-
-  70% {
-    clip: rect(58px, 9999px, 63px, 0);
-    transform: skew(0.41deg);
-  }
-
-  75% {
-    clip: rect(24px, 9999px, 91px, 0);
-    transform: skew(0.17deg);
-  }
-
-  80% {
-    clip: rect(96px, 9999px, 3px, 0);
-    transform: skew(0.63deg);
-  }
-
-  85% {
-    clip: rect(33px, 9999px, 72px, 0);
-    transform: skew(0.29deg);
-  }
-
-  90% {
-    clip: rect(5px, 9999px, 45px, 0);
-    transform: skew(0.88deg);
-  }
-
-  95% {
-    clip: rect(61px, 9999px, 28px, 0);
-    transform: skew(0.52deg);
-  }
-
-  100% {
-    clip: rect(89px, 9999px, 14px, 0);
-    transform: skew(0.33deg);
-  }
-}
-
-@keyframes glitch-anim2 {
-  0% {
-    clip: rect(65px, 9999px, 100px, 0);
-  }
-
-  25% {
-    clip: rect(22px, 9999px, 12px, 0);
-  }
-
-  50% {
-    clip: rect(5px, 9999px, 85px, 0);
-  }
-
-  75% {
-    clip: rect(98px, 9999px, 43px, 0);
-  }
-
-  100% {
-    clip: rect(15px, 9999px, 66px, 0);
-  }
-}
-
-/* ============================
-   DIGITAL HYPERSPACE REDIRECT
-============================ */
-#redirect-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100vw;
-  height: 100vh;
-  background-color: #000;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  z-index: 10005;
-  /* Supreme z-index */
-  overflow: hidden;
-  animation: fadeInOverlay 0.2s ease-out;
-}
-
-/* Warp Tunnel Effect */
-.warp-tunnel {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 200vmax;
-  height: 200vmax;
-  transform: translate(-50%, -50%);
-  background: repeating-radial-gradient(circle,
-      rgba(0, 255, 157, 0) 0%,
-      rgba(0, 255, 157, 0.1) 10%,
-      rgba(0, 255, 157, 0.4) 20%,
-      rgba(0, 0, 0, 0) 30%);
-  border-radius: 50%;
-  animation: warpSpeed 2s linear infinite;
-  opacity: 0.6;
-  z-index: 1;
-}
-
-.warp-tunnel::before {
-  content: "";
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: repeating-radial-gradient(circle,
-      rgba(255, 0, 60, 0) 0%,
-      rgba(255, 0, 60, 0.1) 15%,
-      rgba(255, 0, 60, 0.3) 25%,
-      rgba(0, 0, 0, 0) 35%);
-  animation: warpSpeed 3s linear infinite reverse;
-}
-
-@keyframes warpSpeed {
-  0% {
-    transform: translate(-50%, -50%) scale(0.1);
-    opacity: 0;
-  }
-
-  20% {
-    opacity: 1;
-  }
-
-  100% {
-    transform: translate(-50%, -50%) scale(1.5);
-    opacity: 0;
-  }
-}
-
-/* Scanlines */
-.scanlines {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: linear-gradient(to bottom,
-      rgba(0, 255, 0, 0.05),
-      rgba(0, 255, 0, 0.1) 50%,
-      rgba(0, 0, 0, 0.2) 50%,
-      rgba(0, 0, 0, 0.5));
-  background-size: 100% 4px;
-  animation: scanlineScroll 0.2s linear infinite;
-  z-index: 2;
-  pointer-events: none;
-}
-
-@keyframes scanlineScroll {
-  from {
-    background-position: 0 0;
-  }
-
-  to {
-    background-position: 0 100%;
-  }
-}
-
-/* Glitch Text */
-.redirect-content {
-  position: relative;
-  z-index: 10;
-  text-align: center;
-}
-
-.glitch-text {
-  font-family: "Orbitron", sans-serif;
-  font-size: 64px;
-  font-weight: 900;
-  color: #fff;
-  letter-spacing: 10px;
-  text-transform: uppercase;
-  position: relative;
-  text-shadow: 2px 2px #ff003c, -2px -2px #00ff9d;
-  animation: glitchSkew 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94) infinite both;
-}
-
-.glitch-text::before,
-.glitch-text::after {
-  content: attr(data-text);
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: #000;
-}
-
-.glitch-text::before {
-  left: 2px;
-  text-shadow: -2px 0 #ff003c;
-  clip: rect(44px, 450px, 56px, 0);
-  animation: glitch-anim 2s infinite linear alternate-reverse;
-}
-
-.glitch-text::after {
-  left: -2px;
-  text-shadow: -2px 0 #00ff9d;
-  clip: rect(44px, 450px, 56px, 0);
-  animation: glitch-anim2 2s infinite linear alternate-reverse;
-}
-
-@keyframes glitchSkew {
-  0% {
-    transform: skew(0deg);
-  }
-
-  20% {
-    transform: skew(-10deg);
-  }
-
-  40% {
-    transform: skew(10deg);
-  }
-
-  60% {
-    transform: skew(-5deg);
-  }
-
-  80% {
-    transform: skew(5deg);
-  }
-
-  100% {
-    transform: skew(0deg);
-  }
-}
-
-@keyframes fadeInOverlay {
-  from {
-    opacity: 0;
-  }
-
-  to {
-    opacity: 1;
-  }
-}
-
-/* ============================
-   RESUME SESSION STYLES
-============================ */
-#login-page .operatives-section {
-  transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
-  max-height: 500px;
-  opacity: 1;
-  overflow: hidden;
-}
-
-#login-page .operatives-section.hidden {
-  max-height: 0;
-  opacity: 0;
-  margin: 0;
-  padding: 0;
-  pointer-events: none;
-}
-
-/* ============================
-   TEAM STATUS & LOGIC
-============================ */
-.team-status-indicator {
-  position: absolute;
-  top: 100%;
-  right: 0;
-  transform: none;
-  margin-top: 12px;
-  color: #00ff9d;
-  font-family: "Rajdhani", sans-serif;
-  font-weight: 700;
-  letter-spacing: 2px;
-  font-size: 14px;
-  text-shadow: 0 0 10px #00ff9d;
-  text-align: right;
-  pointer-events: none;
-  opacity: 0;
-  animation: slideInStatus 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards, pulseGreen 2s infinite alternate;
-  white-space: nowrap;
-}
-
-.team-status-indicator.available {
-  color: #00e5ff;
-  text-shadow: 0 0 10px #00e5ff;
-  animation: slideInStatus 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards, pulseCyan 2s infinite alternate;
-}
-
-@keyframes slideInStatus {
-  from {
-    opacity: 0;
-    transform: translateY(-10px);
-  }
-
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-@keyframes pulseCyan {
-  from {
-    opacity: 0.6;
-    text-shadow: 0 0 5px #00e5ff;
-  }
-
-  to {
-    opacity: 1;
-    text-shadow: 0 0 15px #00e5ff;
-  }
-}
-
-.deploy-btn.resume-mode {
-  background: linear-gradient(45deg, #00ff9d, #00cc7a);
-  border-color: #00ff9d;
-  color: #000;
-  box-shadow: 0 0 30px rgba(0, 255, 157, 0.4);
-}
-
-.deploy-btn.resume-mode:hover {
-  box-shadow: 0 0 50px rgba(0, 255, 157, 0.6);
-  transform: translateY(-2px) scale(1.02);
-}
-
-.team-input.found {
-  border-color: #00ff9d !important;
-  color: #00ff9d;
 }

@@ -1,8 +1,13 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
-import logo from "../assets/logo.png";
-import "../style/login.css"; // Ensure this import is here
+import ImageTypewriter from "../components/Intro/ImageTypewriter.jsx";
+import { LOGO_REVEAL_BOXES } from "../components/Intro/introConstants.js";
+import logoTypingImg from "../assets/logo-typing.png";
+import celestiusLogo from "../assets/celestius-logo.png";
+import Intro from "../components/Intro/Intro.jsx";
+import SceneBackground from "../components/Background/SceneBackground.jsx";
+import "../style/login.css";
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL || "";
 
@@ -26,12 +31,12 @@ const Deadlock = () => {
   const [isTeamAvailable, setIsTeamAvailable] = useState(false);
   const [existingTeamData, setExistingTeamData] = useState(null);
 
-  // Loading State
+  // Loading / Intro state
   const [isLoading, setIsLoading] = useState(true);
-  const [progress, setProgress] = useState(0);
-  const [loadingText, setLoadingText] = useState("INITIALIZING PROTOCOLS...");
-  const [fadeOut, setFadeOut] = useState(false);
-  const [isLoaded, setIsLoaded] = useState(false);
+
+  // Image Typewriter Reveal State (above Team Name on Login Screen)
+  const [revealedCount, setRevealedCount] = useState(0);
+  const [isLogoComplete, setIsLogoComplete] = useState(false);
 
   // Redirect State
   const [isRedirecting, setIsRedirecting] = useState(false);
@@ -51,8 +56,70 @@ const Deadlock = () => {
   const [notification, setNotification] = useState(null);
 
   useEffect(() => {
-    document.title = "Deadlock // Login";
+    document.title = "LARPER OR CODER // Celestius";
   }, []);
+
+  // Image Typewriter Sequence: Continuously repeats the logo typing animation
+  useEffect(() => {
+    if (isLoading) return;
+
+    let isCancelled = false;
+    let timerId = null;
+    const total = LOGO_REVEAL_BOXES.length; // 13 reveal boxes
+    const TYPE_SPEED = 95; // ms per box
+    const BACKSPACE_SPEED = 38; // ms per box
+    const HOLD_FULL = 2400; // ms to pause at full logo before backspacing
+    const HOLD_EMPTY = 400; // ms to pause before typing again
+
+    const runLoop = () => {
+      let current = 0;
+      setIsLogoComplete(false);
+      setRevealedCount(0);
+
+      const typeStep = () => {
+        if (isCancelled) return;
+        current++;
+        setRevealedCount(current);
+
+        if (current < total) {
+          timerId = setTimeout(typeStep, TYPE_SPEED);
+        } else {
+          // Full logo revealed - mark complete and hold
+          setIsLogoComplete(true);
+          timerId = setTimeout(() => {
+            if (isCancelled) return;
+            setIsLogoComplete(false);
+            backspaceStep();
+          }, HOLD_FULL);
+        }
+      };
+
+      const backspaceStep = () => {
+        if (isCancelled) return;
+        current--;
+        setRevealedCount(Math.max(0, current));
+
+        if (current > 0) {
+          timerId = setTimeout(backspaceStep, BACKSPACE_SPEED);
+        } else {
+          // Reached 0 (empty) - pause briefly then type again
+          timerId = setTimeout(() => {
+            if (isCancelled) return;
+            runLoop();
+          }, HOLD_EMPTY);
+        }
+      };
+
+      timerId = setTimeout(typeStep, TYPE_SPEED);
+    };
+
+    runLoop();
+
+    return () => {
+      isCancelled = true;
+      if (timerId) clearTimeout(timerId);
+    };
+  }, [isLoading]);
 
   // Check Team Existence
   useEffect(() => {
@@ -86,47 +153,6 @@ const Deadlock = () => {
 
     checkTeam();
   }, [debouncedTeamName]);
-
-
-  useEffect(() => {
-    if (!isLoading) return;
-
-    const phrases = [
-      "ESTABLISHING SECURE CONNECTION...",
-      "VERIFYING BIOMETRICS...",
-      "CHECKING AUTHENTICATION...",
-      "SYNCING WITH CELESTIUS...",
-      "ACCESS GRANTED"
-    ];
-
-    let currentPhraseIndex = 0;
-    const interval = setInterval(() => {
-      setProgress((prev) => {
-        if (prev >= 100) {
-          clearInterval(interval);
-          setLoadingText("ACCESS GRANTED");
-          setTimeout(() => {
-            setFadeOut(true);
-            setTimeout(() => {
-              setIsLoading(false);
-              setIsLoaded(true); // Trigger reveal animations
-            }, 800);
-          }, 500);
-          return 100;
-        }
-
-        const phase = Math.floor((prev / 100) * phrases.length);
-        if (phrases[phase] && phase !== currentPhraseIndex) {
-          setLoadingText(phrases[phase]);
-          currentPhraseIndex = phase;
-        }
-
-        return prev + 1;
-      });
-    }, 40);
-
-    return () => clearInterval(interval);
-  }, [isLoading]);
 
   const showNotification = (message, type = "error") => {
     setNotification({ message, type });
@@ -164,13 +190,10 @@ const Deadlock = () => {
       localStorage.setItem("teamId", existingTeamData._id);
       localStorage.setItem("teamName", existingTeamData.name);
 
-      // Proactive redirection based on current round
       let targetPath = "/deadlock/lobby";
-
       if (existingTeamData.currentRound === 'crack-the-code' || existingTeamData.currentRound === 'eliminated') {
         targetPath = "/crackTheCode";
       } else if (existingTeamData.currentRound === 'deadlock') {
-        // Still go to lobby first to find the match, or could check for active match here
         targetPath = "/deadlock/lobby";
       }
 
@@ -184,10 +207,8 @@ const Deadlock = () => {
       return;
     }
 
-    if (isDeploying) return;
     setIsDeploying(true);
 
-    // NEW DEPLOYMENT
     const teamData = {
       name: teamName,
       members: members
@@ -215,116 +236,105 @@ const Deadlock = () => {
     }
   };
 
-  const handleMouseMove = (e) => {
-    const { clientX, clientY } = e;
-    const x = Math.round((clientX / window.innerWidth) * 100);
-    const y = Math.round((clientY / window.innerHeight) * 100);
-
-    document.documentElement.style.setProperty('--mouse-x', `${x}%`);
-    document.documentElement.style.setProperty('--mouse-y', `${y}%`);
-  };
-
   return (
-    <div id="login-page" className={isLoaded ? "loaded" : ""} onMouseMove={handleMouseMove}>
+    <>
+      {/* Story Introduction Overlay from Reference */}
+      {isLoading && <Intro onComplete={() => setIsLoading(false)} />}
 
-      {/* Advanced Redirect Overlay */}
-      {isRedirecting && (
-        <div id="redirect-overlay">
-          <div className="warp-tunnel"></div>
-          <div className="scanlines"></div>
-          <div className="redirect-content">
-            <h1 className="glitch-text" data-text={redirectMessages[redirectStep]}>
-              {redirectMessages[redirectStep]}
-            </h1>
-          </div>
-        </div>
-      )}
+      <div id="login-page">
+        {/* Ambient Particle & Code Glyph Background */}
+        <SceneBackground />
 
-      {/* Cyber Notification */}
-      {notification && (
-        <div className={`cyber-notification ${notification.type}`}>
-          {notification.message}
-        </div>
-      )}
-
-      {/* Loading Overlay */}
-      {isLoading && (
-        <div id="login-loading-overlay" className={fadeOut ? "fade-out" : ""}>
-          <div className="hologram-container">
-            <img src={logo} alt="Loading Logo" className="loading-logo-glow" />
-            <h1 className="cinematic-title">DEADLOCK</h1>
-
-            <div className="loading-text-container">
-              <div className="loading-text">{loadingText}</div>
-            </div>
-
-            <div className="cyber-progress-container">
-              <div className="cyber-progress-bar" style={{ width: `${progress}%` }}></div>
+        {/* Advanced Redirect Overlay */}
+        {isRedirecting && (
+          <div id="redirect-overlay">
+            <div className="redirect-content">
+              <h1 className="glitch-text">
+                {redirectMessages[redirectStep]}
+              </h1>
             </div>
           </div>
-        </div>
-      )}
+        )}
 
-      {/* Header */}
-      <div className="login-header">
-        <div className="brand-left">
-          <img src={logo} alt="Logo" className="brand-logo" />
-          <span className="brand-text">TAKSHASHILA</span>
-        </div>
-        {/* <div className="brand-right">
-          <span className="brand-text">Celestius</span>
-        </div> */}
-      </div>
-
-      {/* Main Content with 3D Reveal */}
-      <div className="login-content">
-        <h1 className="main-title">DEADLOCK</h1>
-
-        <div className="input-group cyber-input-group">
-          <input
-            type="text"
-            className={`team-input ${teamExists ? "found" : ""}`}
-            value={teamName}
-            onChange={(e) => setTeamName(e.target.value)}
-            required
-            placeholder="ENTER TEAM NAME"
-          />
-          {/* <label className="input-label">ENTER TEAM NAME</label> */}
-          <span className="input-highlight"></span>
-          <div className="input-bar"></div>
-          {teamExists && <div className="team-status-indicator">TEAM FOUND</div>}
-          {isTeamAvailable && <div className="team-status-indicator available">TEAM NAME AVAILABLE</div>}
-        </div>
-
-        {/* Conditionally Render Operatives */}
-        <div className={`operatives-section ${teamExists ? "hidden" : "visible"}`}>
-          <div className="section-label">OPERATIVES</div>
-          <div className="operatives-grid">
-            {members.map((member, index) => (
-              <div className="operative-card" key={index}>
-                <span className="op-number">0{index + 1}</span>
-                <input
-                  type="text"
-                  className="operative-input"
-                  value={member}
-                  placeholder={`Operative ${index + 1}`}
-                  onChange={(e) => handleMemberChange(index, e.target.value)}
-                />
-              </div>
-            ))}
+        {/* Cyber Notification */}
+        {notification && (
+          <div className={`cyber-notification ${notification.type}`}>
+            {notification.message}
           </div>
-        </div>
+        )}
 
-        <button
-          className={`deploy-btn ${teamExists ? "resume-mode" : ""} ${(isDeploying || isResuming) ? "deploying" : ""}`}
-          onClick={handleSubmit}
-          disabled={isDeploying || isResuming}
-        >
-          {teamExists ? (isResuming ? "SESSION RESUMING..." : "RESUME MISSION") : (isDeploying ? "DEPLOYING..." : "INITIALIZE DEPLOYMENT")}
-        </button>
+        {/* Header Navbar */}
+        <header className="login-header">
+          <div className="brand-left">
+            <img src={celestiusLogo} alt="Celestius" className="celestius-brand-logo" />
+          </div>
+          <div className="brand-right">
+            <span className="event-badge">LARPER OR CODER</span>
+          </div>
+        </header>
+
+        {/* Main Content */}
+        <main className="login-content">
+          {/* Main Event Title Banner using ImageTypewriter directly above Team Name */}
+          <div className="event-title-banner-container">
+            <div className="logo-typewriter-wrapper">
+              <ImageTypewriter
+                imageSrc={logoTypingImg}
+                boxes={LOGO_REVEAL_BOXES}
+                revealedCount={revealedCount}
+                showActiveCursor={!isLogoComplete}
+                isComplete={isLogoComplete}
+                alt="LARPER OR CODER"
+              />
+            </div>
+          </div>
+
+          {/* Team Name Input */}
+          <div className="cyber-input-group">
+            <input
+              type="text"
+              className="team-input"
+              value={teamName}
+              onChange={(e) => setTeamName(e.target.value)}
+              required
+              placeholder="ENTER TEAM NAME..."
+              autoComplete="off"
+            />
+            {teamExists && <div className="team-status-indicator">TEAM RECORD IDENTIFIED // RESUME READY</div>}
+            {isTeamAvailable && <div className="team-status-indicator available">TEAM IDENTIFIER AVAILABLE</div>}
+          </div>
+
+          {/* Conditionally Render Operatives */}
+          <div className={`operatives-section ${teamExists ? "hidden" : "visible"}`}>
+            <div className="section-label">// ASSIGNED OPERATIVES</div>
+            <div className="operatives-grid">
+              {members.map((member, index) => (
+                <div className="operative-card" key={index}>
+                  <span className="op-number">0{index + 1}</span>
+                  <input
+                    type="text"
+                    className="operative-input"
+                    value={member}
+                    placeholder={`Operative ${index + 1}`}
+                    onChange={(e) => handleMemberChange(index, e.target.value)}
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Action Button */}
+          <button
+            className={`deploy-btn ${teamExists ? "resume-mode" : ""} ${(isDeploying || isResuming) ? "deploying" : ""}`}
+            onClick={handleSubmit}
+            disabled={isDeploying || isResuming}
+          >
+            {teamExists ? (isResuming ? "RESUMING..." : "RESUME MISSION") : (isDeploying ? "DEPLOYING..." : "INITIALIZE DEPLOYMENT")}
+          </button>
+        </main>
       </div>
-    </div>
+    </>
   );
-}
+};
 
 export default Deadlock;

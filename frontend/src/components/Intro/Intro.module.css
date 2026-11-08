@@ -1,0 +1,394 @@
+/* client/src/components/Intro/Intro.module.css */
+
+/* Screen reader only utility class - completely hidden visually */
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.overlay {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  height: 100dvh;
+  background-color: #050507;
+  /* Top radial orange tint + edge vignette + subtle dot texture */
+  background-image:
+    radial-gradient(ellipse 70% 45% at 50% 0%, rgba(242, 107, 58, 0.12) 0%, transparent 70%),
+    radial-gradient(ellipse at center, transparent 40%, rgba(0, 0, 0, 0.88) 100%),
+    radial-gradient(rgba(247, 237, 216, 0.05) 1px, transparent 1px);
+  background-size: 100% 100%, 100% 100%, 24px 24px;
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+  overflow: hidden;
+  transition: opacity 600ms cubic-bezier(0.16, 1, 0.3, 1), visibility 600ms cubic-bezier(0.16, 1, 0.3, 1);
+  user-select: none;
+}
+
+.overlay.fadingOut {
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* Background canvas for floating code glyphs */
+.particleCanvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* Screen wash for ALERT phase (3 soft orange blinks over 1s, peak opacity 0.25) */
+.orangeWash {
+  position: absolute;
+  inset: 0;
+  background-color: #F57546;
+  opacity: 0;
+  pointer-events: none;
+  z-index: 5;
+  animation: orangeFlashWash 1200ms ease-in-out 1;
+}
+
+@keyframes orangeFlashWash {
+  0% { opacity: 0; }
+  16% { opacity: 0.25; }
+  33% { opacity: 0; }
+  49% { opacity: 0.25; }
+  66% { opacity: 0; }
+  83% { opacity: 0.25; }
+  100% { opacity: 0; }
+}
+
+/* Screen wash for GREEN phase (3 soft green blinks over 1.4s, peak opacity 0.28) */
+.greenWash {
+  position: absolute;
+  inset: 0;
+  background-color: #3DDC84;
+  opacity: 0;
+  pointer-events: none;
+  z-index: 5;
+  animation: greenFlashWash 1400ms ease-in-out 1;
+}
+
+@keyframes greenFlashWash {
+  0% { opacity: 0; }
+  16% { opacity: 0.28; }
+  33% { opacity: 0; }
+  49% { opacity: 0.28; }
+  66% { opacity: 0; }
+  83% { opacity: 0.28; }
+  100% { opacity: 0; }
+}
+
+/* 100% Snap Clean Flash (200ms) */
+.completeFlash {
+  position: absolute;
+  inset: 0;
+  background-color: #FFFFFF;
+  opacity: 0;
+  pointer-events: none;
+  z-index: 6;
+  animation: flashWhite 200ms ease-out 1;
+}
+
+@keyframes flashWhite {
+  0% { opacity: 0.35; }
+  100% { opacity: 0; }
+}
+
+
+/* Main Stage Container */
+.stage {
+  position: relative;
+  z-index: 10;
+  width: 100%;
+  max-width: 880px;
+  min-height: 400px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+
+/* Loader Area (Alert Banner + Percentage + Segmented Bar + Status Line) */
+.loaderArea {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.5rem;
+  animation: fadeIn 240ms ease-out;
+}
+
+.loaderArea.clearing {
+  animation: fadeOutScale 400ms ease-in forwards;
+}
+
+/* Refined Alert Banner - Sits ABOVE the loader */
+.alertBannerWrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 90%;
+  max-width: 680px;
+  animation: slideInFromTop 280ms cubic-bezier(0.16, 1, 0.3, 1), alertShake 3s ease-in-out infinite;
+  margin-bottom: 0.5rem;
+}
+
+.alertBanner {
+  position: relative;
+  width: 100%;
+  background-color: #F7EDD8;
+  color: #F57546;
+  border: 2px solid #050507;
+  border-radius: 8px;
+  padding: 1.15rem 2rem;
+  box-shadow: 6px 6px 0px rgba(0, 0, 0, 0.95);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  animation: alertPulseOrange 1.2s ease-in-out infinite;
+  transition: color 200ms ease, border-color 200ms ease;
+}
+
+.alertBannerGreen {
+  color: #3DDC84;
+  animation: alertPulseGreen 1.2s ease-in-out infinite;
+}
+
+/* Orange/Green Square Handles on left and right edges */
+.handleLeft,
+.handleRight {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 12px;
+  height: 28px;
+  background-color: #F57546;
+  border: 2px solid #050507;
+  border-radius: 2px;
+  z-index: 2;
+  transition: background-color 200ms ease;
+}
+
+.handleLeft {
+  left: -8px;
+}
+
+.handleRight {
+  right: -8px;
+}
+
+.alertBannerGreen .handleLeft,
+.alertBannerGreen .handleRight {
+  background-color: #3DDC84;
+}
+
+.alertTitleRow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.85rem;
+}
+
+.alertText {
+  font-family: 'Orbitron', 'Rajdhani', sans-serif;
+  font-size: clamp(1.2rem, 5vw, 2.5rem);
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  line-height: 1.1;
+}
+
+.alertStatusSubline {
+  font-family: 'JetBrains Mono', 'Fira Code', 'Courier New', monospace;
+  font-size: clamp(0.75rem, 2vw, 0.85rem);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: #050507;
+  opacity: 0.85;
+}
+
+/* Large Percentage Counter */
+.counterRow {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  font-family: 'Orbitron', 'Rajdhani', sans-serif;
+  font-weight: 800;
+  font-size: clamp(3.5rem, 13vw, 7.5rem);
+  line-height: 0.95;
+  color: #F9EDD2;
+  letter-spacing: -0.04em;
+  text-shadow: 0 10px 30px rgba(0, 0, 0, 0.8);
+}
+
+.counterPercent {
+  font-family: 'JetBrains Mono', 'Fira Code', 'Courier New', monospace;
+  font-size: clamp(1.5rem, 5vw, 3rem);
+  font-weight: 700;
+  color: #F57546;
+  margin-left: 0.35rem;
+  transition: color 200ms ease;
+}
+
+.counterRow.greenText .counterPercent {
+  color: #3DDC84;
+}
+
+/* Thick Segmented Bar with thinner 2px gaps & clean blocks */
+.segmentedBar {
+  width: 100%;
+  max-width: 500px;
+  height: 22px;
+  background-color: #0b0b0f;
+  border: 1px solid rgba(247, 237, 216, 0.12);
+  border-radius: 6px;
+  padding: 2px;
+  display: flex;
+  gap: 2px;
+  align-items: center;
+  box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.9);
+}
+
+.segmentBlock {
+  flex: 1;
+  height: 100%;
+  background-color: #16161c;
+  border-radius: 1px;
+  transition: background-color 40ms linear;
+}
+
+.segmentBlock.filled {
+  background-color: #F57546;
+}
+
+.segmentBlock.tip {
+  background-color: #FFA575;
+}
+
+.segmentedBar.greenMode .segmentBlock.filled {
+  background-color: #3DDC84;
+}
+
+.segmentedBar.greenMode .segmentBlock.tip {
+  background-color: #8CFFBD;
+}
+
+/* Single Status Line under the bar in muted cream */
+.statusLineMuted {
+  font-family: 'JetBrains Mono', 'Fira Code', 'Courier New', monospace;
+  font-size: clamp(0.75rem, 2.5vw, 0.8125rem);
+  color: #D8CCAE;
+  letter-spacing: 0.04em;
+  min-height: 20px;
+  opacity: 0.8;
+}
+
+/* ------------------------------------------------------------- */
+/* EXACT LOGO TYPING & SWAP SCENE                                */
+/* ------------------------------------------------------------- */
+
+.logoContainer {
+  position: relative;
+  width: clamp(280px, 85vw, 860px);
+  aspect-ratio: 840 / 328;
+  max-height: 70vh;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: fadeIn 300ms ease-out;
+}
+
+/* Keyframes */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes fadeOutScale {
+  from {
+    opacity: 1;
+    transform: scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+}
+
+@keyframes slideInFromTop {
+  from {
+    opacity: 0;
+    transform: translateY(-26px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes alertPulseOrange {
+  0%, 100% {
+    box-shadow: 6px 6px 0px rgba(0, 0, 0, 0.95), 0 0 0 0 rgba(245, 117, 70, 0);
+  }
+  50% {
+    box-shadow: 6px 6px 0px rgba(0, 0, 0, 0.95), 0 0 0 6px rgba(245, 117, 70, 0.45);
+  }
+}
+
+@keyframes alertPulseGreen {
+  0%, 100% {
+    box-shadow: 6px 6px 0px rgba(0, 0, 0, 0.95), 0 0 0 0 rgba(61, 220, 132, 0);
+  }
+  50% {
+    box-shadow: 6px 6px 0px rgba(0, 0, 0, 0.95), 0 0 0 6px rgba(61, 220, 132, 0.55);
+  }
+}
+
+@keyframes alertShake {
+  0%, 100% { transform: translate(0, 0); }
+  2% { transform: translate(-2px, 1px); }
+  4% { transform: translate(2px, -1px); }
+  6% { transform: translate(-1px, 2px); }
+  8% { transform: translate(1px, -2px); }
+  10% { transform: translate(0, 0); }
+}
+
+/* Reduced Motion Override */
+@media (prefers-reduced-motion: reduce) {
+  .overlay {
+    transition: none !important;
+  }
+  .alertBannerWrapper {
+    animation: none !important;
+  }
+  .alertBanner {
+    animation: none !important;
+  }
+  .orangeWash,
+  .greenWash,
+  .completeFlash {
+    display: none !important;
+  }
+}
+
