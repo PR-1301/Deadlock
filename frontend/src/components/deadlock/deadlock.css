@@ -1315,3 +1315,57 @@ html {
     opacity: 1;
   }
 }
+
+/* ============================
+   ARENA LOADING SCREEN
+============================ */
+.arena-loading-screen {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  background-color: #050507;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 99999;
+  user-select: none;
+}
+
+.arena-loading-box {
+  position: relative;
+  z-index: 10;
+  padding: 3rem 4rem;
+  max-width: 720px;
+  width: 90%;
+  background: rgba(14, 14, 18, 0.9);
+  border: 1px solid rgba(246, 236, 214, 0.16);
+  backdrop-filter: blur(16px);
+  box-shadow: 0 25px 70px rgba(0, 0, 0, 0.9), 0 0 30px rgba(54, 227, 240, 0.15);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 1.5rem;
+}
+
+.arena-radar-pulse {
+  position: relative;
+  width: 50px;
+  height: 50px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.arena-telemetry-badge {
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-size: clamp(0.75rem, 1.4vw, 0.85rem);
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  color: #F5A21F;
+  background: rgba(245, 162, 31, 0.1);
+  border: 1px solid rgba(245, 162, 31, 0.25);
+  padding: 6px 16px;
+  border-radius: 4px;
+}
