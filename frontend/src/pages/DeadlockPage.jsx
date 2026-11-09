@@ -9,6 +9,7 @@ import SubmissionPanel from '../components/deadlock/SubmissionPanel';
 import ResultOverlay from '../components/deadlock/ResultOverlay';
 import WinnerBackground from '../components/deadlock/WinnerBackground';
 import LoserBackground from '../components/deadlock/LoserBackground';
+import ScannerLoader from '../components/Loader/ScannerLoader';
 import '../components/deadlock/deadlock.css';
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL || "";
@@ -191,7 +192,14 @@ const DeadlockPage = () => {
         }
     };
 
-    if (loading) return <div className="loading-screen">Loading Match...</div>;
+    if (loading) {
+        return (
+            <ScannerLoader
+                titleOverride="CALIBRATING ARENA"
+                subOverride="> [TUG OF AURA] SYNCING ENGINE & TEST CASES"
+            />
+        );
+    }
     if (error) return <div className="error-screen">{error}</div>;
     if (!match) return null;
 

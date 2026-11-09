@@ -1,0 +1,231 @@
+/* ScannerLoader.css - Replicating the Intro Scanner with Alert Banner, 99% Orbitron, 24-Segment Bar & Telemetry */
+
+.scanner-loader-overlay {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  background-color: #050507;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10001;
+  overflow: hidden;
+  user-select: none;
+}
+
+.scanner-loader-stage {
+  position: relative;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 90%;
+  max-width: 640px;
+  gap: 1.6rem;
+  animation: scannerStageFadeIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes scannerStageFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* ========================================================
+   1. ALERT BANNER (Matching "LARPER DETECTED" Cream Box)
+======================================================== */
+.scanner-banner-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  max-width: 580px;
+  margin-bottom: 0.25rem;
+}
+
+.scanner-alert-banner {
+  position: relative;
+  width: 100%;
+  background-color: #F7EDD8;
+  color: #F57546;
+  border: 2px solid #050507;
+  border-radius: 8px;
+  padding: 1.1rem 2rem;
+  box-shadow: 6px 6px 0px rgba(0, 0, 0, 0.95);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  transition: color 200ms ease, border-color 200ms ease, box-shadow 200ms ease;
+  animation: scannerAlertPulse 1.4s ease-in-out infinite;
+}
+
+@keyframes scannerAlertPulse {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.008);
+  }
+}
+
+.scanner-alert-banner.green-mode {
+  color: #3DDC84;
+  box-shadow: 6px 6px 0px rgba(0, 0, 0, 0.95), 0 0 20px rgba(61, 220, 132, 0.25);
+}
+
+/* Handles on Left & Right */
+.scanner-handle {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 12px;
+  height: 28px;
+  background-color: #F57546;
+  border: 2px solid #050507;
+  border-radius: 2px;
+  z-index: 2;
+  transition: background-color 200ms ease;
+}
+
+.scanner-handle.left {
+  left: -8px;
+}
+
+.scanner-handle.right {
+  right: -8px;
+}
+
+.scanner-handle.green {
+  background-color: #3DDC84;
+}
+
+.scanner-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.scanner-alert-title {
+  font-family: 'Orbitron', 'Rajdhani', 'JetBrains Mono', sans-serif;
+  font-size: clamp(1.2rem, 4vw, 2.3rem);
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  line-height: 1.1;
+  text-align: center;
+}
+
+.scanner-alert-subline {
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-size: clamp(0.75rem, 1.8vw, 0.85rem);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: #050507;
+  opacity: 0.88;
+  text-align: center;
+}
+
+/* ========================================================
+   2. LARGE PERCENTAGE COUNTER (99%)
+======================================================== */
+.scanner-counter-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  font-family: 'Orbitron', 'Rajdhani', sans-serif;
+  font-weight: 800;
+  font-size: clamp(3.5rem, 12vw, 7.5rem);
+  line-height: 0.95;
+  color: #F9EDD2;
+  letter-spacing: -0.04em;
+  text-shadow: 0 10px 30px rgba(0, 0, 0, 0.8);
+}
+
+.scanner-counter-percent {
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-size: clamp(1.5rem, 5vw, 3rem);
+  font-weight: 700;
+  color: #F57546;
+  margin-left: 0.35rem;
+  transition: color 200ms ease;
+}
+
+.scanner-counter-row.green-text {
+  color: #F9EDD2;
+}
+
+.scanner-counter-row.green-text .scanner-counter-percent {
+  color: #3DDC84;
+}
+
+/* ========================================================
+   3. 24-SEGMENT PROGRESS BAR
+======================================================== */
+.scanner-segmented-bar {
+  width: 100%;
+  max-width: 500px;
+  height: 22px;
+  background-color: #0b0b0f;
+  border: 1px solid rgba(247, 237, 216, 0.12);
+  border-radius: 6px;
+  padding: 2px;
+  display: flex;
+  gap: 2px;
+  align-items: center;
+  box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.9);
+}
+
+.scanner-segment-block {
+  flex: 1;
+  height: 100%;
+  background-color: #16161c;
+  border-radius: 1px;
+  transition: background-color 40ms linear;
+}
+
+.scanner-segment-block.filled {
+  background-color: #F57546;
+}
+
+.scanner-segment-block.tip {
+  background-color: #FFA575;
+}
+
+.scanner-segmented-bar.green-mode .scanner-segment-block.filled {
+  background-color: #3DDC84;
+}
+
+.scanner-segmented-bar.green-mode .scanner-segment-block.tip {
+  background-color: #8CFFBD;
+}
+
+/* ========================================================
+   4. TELEMETRY STATUS LINE
+======================================================== */
+.scanner-telemetry-row {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+}
+
+.scanner-telemetry-text {
+  font-family: 'JetBrains Mono', 'Fira Code', 'Courier New', monospace;
+  font-size: clamp(0.75rem, 2vw, 0.8125rem);
+  color: #D8CCAE;
+  letter-spacing: 0.04em;
+  min-height: 20px;
+  opacity: 0.8;
+  text-align: center;
+}
+

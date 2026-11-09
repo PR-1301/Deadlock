@@ -1,0 +1,240 @@
+/* TleLogo.css - Replicated faithfully from TLE glitch terminal reference */
+
+@keyframes tle-j1 {
+  0%, 78% { transform: translateX(-24px); }
+  80% { transform: translateX(16px); }
+  84% { transform: translateX(-38px); }
+  88%, 100% { transform: translateX(-24px); }
+}
+
+@keyframes tle-j2 {
+  0%, 60% { transform: translateX(20px); }
+  63% { transform: translateX(-14px); }
+  67%, 100% { transform: translateX(20px); }
+}
+
+@keyframes tle-ch {
+  0%, 90% { transform: translate(-9px, 3px); }
+  92% { transform: translate(-18px, -3px); }
+  95%, 100% { transform: translate(-9px, 3px); }
+}
+
+@keyframes tle-blink {
+  0%, 50% { opacity: 1; }
+  51%, 100% { opacity: 0; }
+}
+
+.tle-logo-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: 2rem;
+  width: 100%;
+  user-select: none;
+}
+
+/* Terminal prompt - made smaller and sleeker */
+.tle-terminal-prompt {
+  margin: 0 0 10px 0;
+  font-family: 'JetBrains Mono', 'Fira Code', 'Courier New', monospace;
+  font-size: clamp(0.6875rem, 1.2vw, 0.775rem);
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  background: rgba(20, 20, 24, 0.7);
+  border: 1px solid rgba(246, 236, 214, 0.15);
+  padding: 4px 14px;
+  border-radius: 9999px;
+  backdrop-filter: blur(8px);
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.6);
+}
+
+.tle-prompt-path {
+  color: #F5A21F;
+}
+
+.tle-prompt-cmd {
+  color: #F6ECD6;
+}
+
+.tle-cur {
+  display: inline-block;
+  width: 6px;
+  height: 12px;
+  background: #F5A21F;
+  margin-left: 2px;
+  animation: tle-blink 1s steps(1) infinite;
+}
+
+/* Title wrapper - scaled up bigger */
+.tle-title-wrapper {
+  position: relative;
+  line-height: 0.85;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  margin: 0 auto;
+  padding: 4px 40px 0;
+}
+
+.tle-layer {
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-size: clamp(120px, 24vw, 240px);
+  font-weight: 800;
+  line-height: 0.85;
+  letter-spacing: -0.03em;
+  white-space: nowrap;
+  margin: 0;
+  text-align: center;
+}
+
+.tle-base {
+  position: relative;
+  color: #F6ECD6;
+  text-shadow: 0 0 35px rgba(240, 122, 78, 0.5), 0 0 75px rgba(240, 122, 78, 0.25);
+}
+
+.tle-or {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #F07A4E;
+  transform: translate(-9px, 3px);
+  animation: tle-ch 4s steps(1) infinite;
+}
+
+.tle-cyan {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #36E3F0;
+  opacity: 0.8;
+  transform: translate(8px, -2px);
+}
+
+.tle-s1 {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #F6ECD6;
+  background: #050507;
+  clip-path: inset(36% 0 54% 0);
+  transform: translateX(-24px);
+  animation: tle-j1 3.2s steps(1) infinite;
+}
+
+.tle-s2 {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #F07A4E;
+  background: #050507;
+  clip-path: inset(66% 0 27% 0);
+  transform: translateX(20px);
+  animation: tle-j2 2.6s steps(1) infinite;
+}
+
+.tle-bar-cyan {
+  position: absolute;
+  left: 6%;
+  width: 34%;
+  top: 24%;
+  height: 4px;
+  background: #36E3F0;
+  opacity: 0.85;
+  box-shadow: 0 0 12px #36E3F0;
+}
+
+.tle-bar-orange {
+  position: absolute;
+  right: 6%;
+  width: 25%;
+  top: 78%;
+  height: 6px;
+  background: #F07A4E;
+  box-shadow: 0 0 14px #F07A4E;
+}
+
+/* Abbreviation in matching TLE glitch/terminal style */
+.tle-abbreviation {
+  margin-top: 4px;
+  margin-bottom: 16px;
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-size: clamp(0.6875rem, 1.2vw, 0.8125rem);
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: 0.16em;
+  padding-left: 0.16em;
+  text-transform: uppercase;
+  color: #F6ECD6;
+  text-shadow: 0 0 12px rgba(240, 122, 78, 0.5), 0 0 24px rgba(240, 122, 78, 0.2);
+  display: block;
+  text-align: center;
+  width: 100%;
+}
+
+/* Round 1 Badge & Tug of Aura - generous spacing from subtitle */
+.tle-badge-row {
+  margin-top: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-size: 0.875rem;
+  letter-spacing: 0.12em;
+}
+
+.tle-round-tag {
+  color: #050507;
+  background: #F07A4E;
+  font-weight: 800;
+  padding: 4px 12px;
+  border-radius: 4px;
+  box-shadow: 0 0 14px rgba(240, 122, 78, 0.4);
+}
+
+.tle-dot {
+  color: rgba(246, 236, 214, 0.4);
+}
+
+.tle-round-name {
+  color: #F6ECD6;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  text-shadow: 0 0 12px rgba(245, 117, 70, 0.4);
+}
+
+@media (max-width: 640px) {
+  .tle-title-wrapper {
+    padding: 10px 20px;
+  }
+  .tle-abbreviation {
+    font-size: 0.75rem;
+    letter-spacing: 0.14em;
+    gap: 4px;
+  }
+  .tle-badge-row {
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 8px;
+    font-size: 0.8rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tle-s1, .tle-s2, .tle-or, .tle-cur {
+    animation: none;
+  }
+}

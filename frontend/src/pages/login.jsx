@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
-import ImageTypewriter from "../components/Intro/ImageTypewriter.jsx";
-import { LOGO_REVEAL_BOXES } from "../components/Intro/introConstants.js";
-import logoTypingImg from "../assets/logo-typing.png";
+import TleLogo from "../components/TLE/TleLogo.jsx";
 import celestiusLogo from "../assets/celestius-logo.png";
+import larperOrCoderImg from "../assets/larper-or-coder.png";
 import Intro from "../components/Intro/Intro.jsx";
 import SceneBackground from "../components/Background/SceneBackground.jsx";
+import ScannerLoader from "../components/Loader/ScannerLoader.jsx";
 import "../style/login.css";
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL || "";
@@ -26,7 +26,7 @@ const Deadlock = () => {
   const [teamName, setTeamName] = useState("");
   const debouncedTeamName = useDebounce(teamName, 300);
 
-  const [members, setMembers] = useState(["", "", ""]);
+  const [members, setMembers] = useState(["", ""]);
   const [teamExists, setTeamExists] = useState(false);
   const [isTeamAvailable, setIsTeamAvailable] = useState(false);
   const [existingTeamData, setExistingTeamData] = useState(null);
@@ -34,19 +34,9 @@ const Deadlock = () => {
   // Loading / Intro state
   const [isLoading, setIsLoading] = useState(true);
 
-  // Image Typewriter Reveal State (above Team Name on Login Screen)
-  const [revealedCount, setRevealedCount] = useState(0);
-  const [isLogoComplete, setIsLogoComplete] = useState(false);
-
   // Redirect State
   const [isRedirecting, setIsRedirecting] = useState(false);
-  const [redirectStep, setRedirectStep] = useState(0);
-  const redirectMessages = [
-    "ACCESS GRANTED",
-    "ESTABLISHING UPLINK...",
-    "BREACHING FIREWALL...",
-    "WELCOME, OPERATIVE."
-  ];
+  const [redirectTarget, setRedirectTarget] = useState("/deadlock/lobby");
 
   // Deployment State
   const [isDeploying, setIsDeploying] = useState(false);
@@ -58,68 +48,6 @@ const Deadlock = () => {
   useEffect(() => {
     document.title = "LARPER OR CODER // Celestius";
   }, []);
-
-  // Image Typewriter Sequence: Continuously repeats the logo typing animation
-  useEffect(() => {
-    if (isLoading) return;
-
-    let isCancelled = false;
-    let timerId = null;
-    const total = LOGO_REVEAL_BOXES.length; // 13 reveal boxes
-    const TYPE_SPEED = 95; // ms per box
-    const BACKSPACE_SPEED = 38; // ms per box
-    const HOLD_FULL = 2400; // ms to pause at full logo before backspacing
-    const HOLD_EMPTY = 400; // ms to pause before typing again
-
-    const runLoop = () => {
-      let current = 0;
-      setIsLogoComplete(false);
-      setRevealedCount(0);
-
-      const typeStep = () => {
-        if (isCancelled) return;
-        current++;
-        setRevealedCount(current);
-
-        if (current < total) {
-          timerId = setTimeout(typeStep, TYPE_SPEED);
-        } else {
-          // Full logo revealed - mark complete and hold
-          setIsLogoComplete(true);
-          timerId = setTimeout(() => {
-            if (isCancelled) return;
-            setIsLogoComplete(false);
-            backspaceStep();
-          }, HOLD_FULL);
-        }
-      };
-
-      const backspaceStep = () => {
-        if (isCancelled) return;
-        current--;
-        setRevealedCount(Math.max(0, current));
-
-        if (current > 0) {
-          timerId = setTimeout(backspaceStep, BACKSPACE_SPEED);
-        } else {
-          // Reached 0 (empty) - pause briefly then type again
-          timerId = setTimeout(() => {
-            if (isCancelled) return;
-            runLoop();
-          }, HOLD_EMPTY);
-        }
-      };
-
-      timerId = setTimeout(typeStep, TYPE_SPEED);
-    };
-
-    runLoop();
-
-    return () => {
-      isCancelled = true;
-      if (timerId) clearTimeout(timerId);
-    };
-  }, [isLoading]);
 
   // Check Team Existence
   useEffect(() => {
@@ -166,18 +94,8 @@ const Deadlock = () => {
   };
 
   const initRedirect = (targetPath = "/deadlock/lobby") => {
+    setRedirectTarget(targetPath);
     setIsRedirecting(true);
-
-    let step = 0;
-    const redirectInterval = setInterval(() => {
-      step++;
-      if (step >= redirectMessages.length) {
-        clearInterval(redirectInterval);
-        navigate(targetPath);
-      } else {
-        setRedirectStep(step);
-      }
-    }, 1200);
   };
 
   const handleSubmit = async () => {
@@ -189,6 +107,9 @@ const Deadlock = () => {
       showNotification(`WELCOME BACK, ${existingTeamData.name}`, "success");
       localStorage.setItem("teamId", existingTeamData._id);
       localStorage.setItem("teamName", existingTeamData.name);
+      if (existingTeamData.members) {
+        localStorage.setItem("teamMembers", JSON.stringify(existingTeamData.members));
+      }
 
       let targetPath = "/deadlock/lobby";
       if (existingTeamData.currentRound === 'crack-the-code' || existingTeamData.currentRound === 'eliminated') {
@@ -221,6 +142,9 @@ const Deadlock = () => {
         showNotification("DEPLOYMENT SUCCESSFUL.", "success");
         localStorage.setItem("teamId", response.data.team._id);
         localStorage.setItem("teamName", response.data.team.name);
+        if (response.data.team.members) {
+          localStorage.setItem("teamMembers", JSON.stringify(response.data.team.members));
+        }
         setTimeout(initRedirect, 1000);
       }
     } catch (error) {
@@ -245,15 +169,13 @@ const Deadlock = () => {
         {/* Ambient Particle & Code Glyph Background */}
         <SceneBackground />
 
-        {/* Advanced Redirect Overlay */}
+        {/* Scanner Loading Animation matching Intro Scanner */}
         {isRedirecting && (
-          <div id="redirect-overlay">
-            <div className="redirect-content">
-              <h1 className="glitch-text">
-                {redirectMessages[redirectStep]}
-              </h1>
-            </div>
-          </div>
+          <ScannerLoader
+            onComplete={() => {
+              navigate(redirectTarget);
+            }}
+          />
         )}
 
         {/* Cyber Notification */}
@@ -269,25 +191,14 @@ const Deadlock = () => {
             <img src={celestiusLogo} alt="Celestius" className="celestius-brand-logo" />
           </div>
           <div className="brand-right">
-            <span className="event-badge">LARPER OR CODER</span>
+            <img src={larperOrCoderImg} alt="LARPER OR CODER" className="larper-coder-header-logo" />
           </div>
         </header>
 
         {/* Main Content */}
         <main className="login-content">
-          {/* Main Event Title Banner using ImageTypewriter directly above Team Name */}
-          <div className="event-title-banner-container">
-            <div className="logo-typewriter-wrapper">
-              <ImageTypewriter
-                imageSrc={logoTypingImg}
-                boxes={LOGO_REVEAL_BOXES}
-                revealedCount={revealedCount}
-                showActiveCursor={!isLogoComplete}
-                isComplete={isLogoComplete}
-                alt="LARPER OR CODER"
-              />
-            </div>
-          </div>
+          {/* Round 1 TLE Glitch Title Banner */}
+          <TleLogo />
 
           {/* Team Name Input */}
           <div className="cyber-input-group">
@@ -297,7 +208,7 @@ const Deadlock = () => {
               value={teamName}
               onChange={(e) => setTeamName(e.target.value)}
               required
-              placeholder="ENTER TEAM NAME..."
+              placeholder="Drop the Duo's name..."
               autoComplete="off"
             />
             {teamExists && <div className="team-status-indicator">TEAM RECORD IDENTIFIED // RESUME READY</div>}
@@ -306,7 +217,7 @@ const Deadlock = () => {
 
           {/* Conditionally Render Operatives */}
           <div className={`operatives-section ${teamExists ? "hidden" : "visible"}`}>
-            <div className="section-label">// ASSIGNED OPERATIVES</div>
+            <div className="section-label">// THE LOCKED-IN DUO</div>
             <div className="operatives-grid">
               {members.map((member, index) => (
                 <div className="operative-card" key={index}>
@@ -315,7 +226,7 @@ const Deadlock = () => {
                     type="text"
                     className="operative-input"
                     value={member}
-                    placeholder={`Operative ${index + 1}`}
+                    placeholder={`Homie ${index + 1}`}
                     onChange={(e) => handleMemberChange(index, e.target.value)}
                   />
                 </div>
@@ -329,7 +240,7 @@ const Deadlock = () => {
             onClick={handleSubmit}
             disabled={isDeploying || isResuming}
           >
-            {teamExists ? (isResuming ? "RESUMING..." : "RESUME MISSION") : (isDeploying ? "DEPLOYING..." : "INITIALIZE DEPLOYMENT")}
+            {teamExists ? (isResuming ? "RESUMING..." : "RESUME MISSION") : (isDeploying ? "LOCKING IN..." : "LOCK IN")}
           </button>
         </main>
       </div>
