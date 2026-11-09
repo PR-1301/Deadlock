@@ -84,110 +84,180 @@ const useSecurity = (teamName) => {
         }
     }, [teamName]);
 
-    // 🚨 HIGH-IMPACT CYBER ALERT UI 🚨
+    // Sleek security alert banner matching the dark modern UI of the platform
     const showSecurityAlert = useCallback((message) => {
         const id = 'security-alert-' + Math.random().toString(36).substr(2, 9);
         const container = document.createElement('div');
         container.id = id;
 
+        const isTabViolation = message.toLowerCase().includes('tab');
+        const descText = isTabViolation
+            ? 'Window blur or tab switch logged to central referee console.'
+            : 'Unauthorized action blocked and logged to central referee console.';
+
         container.innerHTML = `
-            <div class="cyber-alert-frame">
-                <div class="alert-glitch-overlay"></div>
-                <div class="alert-scanner"></div>
-                <div class="alert-icon">⚠️</div>
-                <div class="alert-body">
-                    <div class="alert-title">SECURITY_VIOLATION_DETECTED</div>
-                    <div class="alert-msg">${message.toUpperCase()}</div>
+            <div class="security-toast-card">
+                <div class="security-toast-header">
+                    <div class="security-toast-tag">
+                        <span class="security-toast-dot"></span>
+                        <span>INTEGRITY ALERT</span>
+                    </div>
+                    <span class="security-toast-status">REPORTED // CORE</span>
                 </div>
-                <div class="alert-status-bar">
-                    <span>STATUS: REPORTED_TO_CORE</span>
-                    <span class="alert-timer">00:${Math.floor(Math.random() * 90 + 10)}</span>
+                <div class="security-toast-body">
+                    <div class="security-toast-icon">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#FF4757" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                            <line x1="12" y1="8" x2="12" y2="12"/>
+                            <line x1="12" y1="16" x2="12.01" y2="16"/>
+                        </svg>
+                    </div>
+                    <div class="security-toast-content">
+                        <div class="security-toast-title">${message.toUpperCase()}</div>
+                        <div class="security-toast-desc">${descText}</div>
+                    </div>
+                </div>
+                <div class="security-toast-progress">
+                    <div class="security-toast-bar"></div>
                 </div>
             </div>
         `;
 
         container.style.cssText = `
             position: fixed;
-            top: 30px;
-            right: 30px;
+            top: 24px;
+            right: 24px;
             z-index: 2147483647;
             pointer-events: none;
-            animation: alertSlideIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            animation: securityToastIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
             font-family: 'JetBrains Mono', 'Fira Code', 'Courier New', monospace;
         `;
 
-        if (!document.getElementById('cyber-alert-styles')) {
+        if (!document.getElementById('security-toast-styles')) {
             const style = document.createElement('style');
-            style.id = 'cyber-alert-styles';
+            style.id = 'security-toast-styles';
             style.innerHTML = `
-                @keyframes alertSlideIn {
-                    from { transform: translateX(120%) skewX(-10deg); opacity: 0; }
-                    to { transform: translateX(0) skewX(0); opacity: 1; }
+                @keyframes securityToastIn {
+                    from {
+                        opacity: 0;
+                        transform: translateY(-16px) scale(0.96);
+                    }
+                    to {
+                        opacity: 1;
+                        transform: translateY(0) scale(1);
+                    }
                 }
-                @keyframes alertGlow {
-                    0%, 100% { box-shadow: 0 0 20px rgba(255, 0, 60, 0.4), inset 0 0 10px rgba(255, 0, 60, 0.2); }
-                    50% { box-shadow: 0 0 40px rgba(255, 0, 60, 0.6), inset 0 0 20px rgba(255, 0, 60, 0.4); }
+                @keyframes securityToastOut {
+                    from {
+                        opacity: 1;
+                        transform: translateY(0) scale(1);
+                    }
+                    to {
+                        opacity: 0;
+                        transform: translateY(-12px) scale(0.96);
+                    }
                 }
-                @keyframes alertScan {
-                    0% { top: -100%; }
-                    100% { top: 200%; }
+                @keyframes securityPulseDot {
+                    0%, 100% { opacity: 1; transform: scale(1); }
+                    50% { opacity: 0.35; transform: scale(0.85); }
                 }
-                .cyber-alert-frame {
-                    background: rgba(10, 0, 0, 0.95);
-                    border: 1px solid #ff003c;
-                    padding: 15px 25px;
-                    min-width: 320px;
+                @keyframes securityBarDrain {
+                    from { width: 100%; }
+                    to { width: 0%; }
+                }
+                .security-toast-card {
+                    background: #141418;
+                    border: 1px solid rgba(255, 71, 87, 0.35);
+                    border-radius: 8px;
+                    padding: 14px 16px 12px 16px;
+                    min-width: 340px;
+                    max-width: 420px;
+                    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.65), 0 0 0 1px rgba(255, 71, 87, 0.12);
                     position: relative;
                     overflow: hidden;
-                    display: flex;
-                    align-items: center;
-                    gap: 20px;
-                    animation: alertGlow 2s infinite;
-                    backdrop-filter: blur(10px);
+                    backdrop-filter: blur(12px);
+                    font-family: 'JetBrains Mono', 'Fira Code', 'Courier New', monospace;
                 }
-                .cyber-alert-frame::before {
-                    content: '';
-                    position: absolute;
-                    left: 0; top: 0; bottom: 0;
-                    width: 4px;
-                    background: #ff003c;
-                }
-                .alert-scanner {
-                    position: absolute;
-                    left: 0; right: 0;
-                    height: 2px;
-                    background: rgba(255, 0, 60, 0.5);
-                    box-shadow: 0 0 15px #ff003c;
-                    animation: alertScan 3s linear infinite;
-                    z-index: 2;
-                }
-                .alert-icon {
-                    font-size: 24px;
-                    filter: drop-shadow(0 0 5px #ff003c);
-                }
-                .alert-title {
-                    color: #ff003c;
-                    font-weight: 900;
-                    font-size: 12px;
-                    letter-spacing: 2px;
-                    margin-bottom: 4px;
-                }
-                .alert-msg {
-                    color: #fff;
-                    font-size: 16px;
-                    font-weight: 700;
-                    letter-spacing: 1px;
-                }
-                .alert-status-bar {
-                    position: absolute;
-                    bottom: 0; left: 4px; right: 0;
-                    background: rgba(255, 0, 60, 0.1);
+                .security-toast-header {
                     display: flex;
                     justify-content: space-between;
-                    padding: 2px 10px;
-                    font-size: 9px;
-                    color: rgba(255, 255, 255, 0.5);
-                    letter-spacing: 1px;
+                    align-items: center;
+                    margin-bottom: 10px;
+                }
+                .security-toast-tag {
+                    display: inline-flex;
+                    align-items: center;
+                    gap: 6px;
+                    padding: 2px 8px;
+                    background: rgba(255, 71, 87, 0.12);
+                    border: 1px solid rgba(255, 71, 87, 0.28);
+                    border-radius: 4px;
+                    font-size: 10px;
+                    font-weight: 700;
+                    letter-spacing: 0.8px;
+                    color: #FF4757;
+                }
+                .security-toast-dot {
+                    width: 6px;
+                    height: 6px;
+                    border-radius: 50%;
+                    background: #FF4757;
+                    animation: securityPulseDot 1.5s ease-in-out infinite;
+                }
+                .security-toast-status {
+                    font-size: 10px;
+                    font-weight: 600;
+                    color: #8E8A82;
+                    letter-spacing: 0.5px;
+                }
+                .security-toast-body {
+                    display: flex;
+                    align-items: flex-start;
+                    gap: 12px;
+                }
+                .security-toast-icon {
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    width: 32px;
+                    height: 32px;
+                    border-radius: 6px;
+                    background: rgba(255, 71, 87, 0.1);
+                    border: 1px solid rgba(255, 71, 87, 0.22);
+                    flex-shrink: 0;
+                    margin-top: 1px;
+                }
+                .security-toast-content {
+                    flex: 1;
+                    min-width: 0;
+                }
+                .security-toast-title {
+                    font-size: 13px;
+                    font-weight: 700;
+                    color: #F6ECD6;
+                    letter-spacing: 0.5px;
+                    line-height: 1.3;
+                    margin-bottom: 3px;
+                }
+                .security-toast-desc {
+                    font-size: 11px;
+                    color: #8E8A82;
+                    line-height: 1.4;
+                    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+                }
+                .security-toast-progress {
+                    position: absolute;
+                    bottom: 0;
+                    left: 0;
+                    right: 0;
+                    height: 2px;
+                    background: rgba(255, 255, 255, 0.06);
+                }
+                .security-toast-bar {
+                    height: 100%;
+                    background: #FF4757;
+                    width: 100%;
+                    animation: securityBarDrain 6s linear forwards;
                 }
             `;
             document.head.appendChild(style);
@@ -195,15 +265,13 @@ const useSecurity = (teamName) => {
 
         document.body.appendChild(container);
 
-        // Auto-remove
+        // Auto-remove after 6 seconds with smooth exit animation
         setTimeout(() => {
             if (container.parentNode) {
-                container.style.transition = 'all 0.5s ease-in';
-                container.style.transform = 'translateX(120%)';
-                container.style.opacity = '0';
-                setTimeout(() => container.remove(), 500);
+                container.style.animation = 'securityToastOut 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards';
+                setTimeout(() => container.remove(), 400);
             }
-        }, 8000);
+        }, 6000);
     }, []);
 
     useEffect(() => {

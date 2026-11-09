@@ -45,6 +45,7 @@ const DeadlockPage = () => {
     });
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [submissionResult, setSubmissionResult] = useState(null);
+    const [isScreenPulse, setIsScreenPulse] = useState(false);
     const lastQuestionIndex = React.useRef(-1);
     const isFetching = React.useRef(false);
     const isSubmittingRef = React.useRef(false);
@@ -157,6 +158,10 @@ const DeadlockPage = () => {
                 if (data.success) {
                     setSubmissionResult({ verdict: "AC" });
                     setTugPosition(data.tugPosition);
+                    // Slight screen shake / pulse on test pass
+                    setIsScreenPulse(true);
+                    setTimeout(() => setIsScreenPulse(false), 500);
+
                     // Update ref immediately to prevent poller race condition
                     lastQuestionIndex.current = data.nextQuestionIndex;
 
@@ -192,6 +197,21 @@ const DeadlockPage = () => {
         }
     };
 
+    // Global keyboard shortcut: Ctrl+Enter or Cmd+Enter to submit solution
+    useEffect(() => {
+        const handleGlobalKeyDown = (e) => {
+            if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+                e.preventDefault();
+                if (!isSubmittingRef.current && match?.status !== 'finished') {
+                    handleCodeSubmit();
+                }
+            }
+        };
+
+        window.addEventListener('keydown', handleGlobalKeyDown);
+        return () => window.removeEventListener('keydown', handleGlobalKeyDown);
+    }, [match?.status, handleCodeSubmit]);
+
     if (loading) {
         return (
             <ScannerLoader
@@ -212,23 +232,22 @@ const DeadlockPage = () => {
     }
 
     return (
-        <div className="deadlock-container">
-            <div className="cyber-grid-bg"></div>
-            <DeadlockHeader
+        <div className={`deadlock-container ${isScreenPulse ? 'screen-pulse' : ''}`}>
+            {/* Slim Top Navigation */}
+            <DeadlockHeader />
+
+            {/* Hero Tug of War: Centered, 2-3x taller, team names anchored at ends, live status in center */}
+            <TugOfWarArena
+                tugPosition={tugPosition}
+                maxPull={match.maxPull || 4}
                 teamA={match.teamA}
                 teamB={match.teamB}
-                status={match.status}
-                winner={match.winner}
                 userTeam={localStorage.getItem('team')}
                 scoreA={match.scoreA}
                 scoreB={match.scoreB}
             />
 
-            <TugOfWarArena
-                tugPosition={tugPosition}
-                maxPull={match.maxPull || 4}
-            />
-
+            {/* Main Coding Workspace */}
             <div className="game-lower-section">
                 <QuestionPanel
                     question={currentQuestion}
@@ -241,6 +260,7 @@ const DeadlockPage = () => {
                         language={language}
                         setLanguage={setLanguage}
                         isLocked={match.status === 'finished' || isSubmitting}
+                        onSubmitShortcut={handleCodeSubmit}
                     />
                     <SubmissionPanel
                         onSubmit={handleCodeSubmit}
@@ -270,34 +290,42 @@ const ResultView = ({ match, teamId, userTeam }) => {
 
     if (isWinner) {
         return (
-            <div className="v2-emergency-fix winner-view">
+            <div className="arena-result-view winner">
                 <WinnerBackground />
-                <div className="cyber-grid-bg"></div>
-                <div className="winner-container">
-                    <div className="victory-crown">👑</div>
-                    <h1 className="result-title winner-text title-v2">
-                        MISSION ACCOMPLISHED
+                <div className="arena-result-card winner">
+                    <div className="result-crown-badge">
+                        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#F5A21F" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M2 4l3 12h14l3-12-6 7-4-7-4 7-6-7zm3 16h14"/>
+                        </svg>
+                    </div>
+                    <div className="result-tag-row">
+                        <span className="result-phase-pill">ROUND 01 // QUALIFIED</span>
+                    </div>
+                    <h1 className="result-main-title winner">
+                        VICTORY // MAXIMUM AURA SECURED
                     </h1>
-                    <p className="result-subtitle">CONGRATULATIONS, TEAM {teamName}. YOU QUALIFIED FOR NEXT ROUND.</p>
+                    <p className="result-subtitle">
+                        PROPS TO DUO <strong className="team-highlight">{teamName}</strong>. YOU COOKED AND SURGED TO ROUND 02.
+                    </p>
 
-                    <div className="mission-details table-v2">
-                        <div className="detail-line">
-                            <span className="detail-label">PROTOCOL:</span>
-                            <span className="detail-value" style={{ color: '#00ff41' }}>DOMINATION_SUCCESS</span>
+                    <div className="result-stats-grid">
+                        <div className="stat-line">
+                            <span className="stat-label">STATUS</span>
+                            <span className="stat-val green">DOMINATION SUCCESS</span>
                         </div>
-                        <div className="detail-line">
-                            <span className="detail-label">ALPHA_SCORE:</span>
-                            <span className="detail-value">{match.scoreA}</span>
+                        <div className="stat-line">
+                            <span className="stat-label">ALPHA SCORE</span>
+                            <span className="stat-val">{match.scoreA || 0}</span>
                         </div>
-                        <div className="detail-line">
-                            <span className="detail-label">OMEGA_SCORE:</span>
-                            <span className="detail-value">{match.scoreB}</span>
+                        <div className="stat-line">
+                            <span className="stat-label">OMEGA SCORE</span>
+                            <span className="stat-val">{match.scoreB || 0}</span>
                         </div>
                     </div>
 
-                    <div className="button-v2">
-                        <a href="/crackTheCode" className="cyber-btn winner-btn">
-                            CONTINUE TO DECRYPTION
+                    <div className="result-actions">
+                        <a href="/crackTheCode" className="arena-action-btn primary">
+                            PROCEED TO ROUND 02 // CRACK THE CODE &rarr;
                         </a>
                     </div>
                 </div>
@@ -306,33 +334,33 @@ const ResultView = ({ match, teamId, userTeam }) => {
     }
 
     return (
-        <div className="v2-emergency-fix loser-view">
+        <div className="arena-result-view loser">
             <LoserBackground />
-            <div className="cyber-grid-bg"></div>
-            <div className="loser-container">
-                <h1 className="result-title loser-text title-v2">
-                    CONNECTION SEVERED
+            <div className="arena-result-card loser">
+                <div className="result-tag-row">
+                    <span className="result-phase-pill loser">ROUND 01 // ELIMINATED</span>
+                </div>
+                <h1 className="result-main-title loser">
+                    DEFEAT // AURA DEPLETED
                 </h1>
-                <p className="result-subtitle">THANK YOU FOR YOUR SERVICE, {teamName}.</p>
+                <p className="result-subtitle">
+                    GOOD FIGHT, DUO <strong className="team-highlight">{teamName}</strong>. KINETIC BEAM PULLED OFF GRID.
+                </p>
 
-                <div className="mission-details red-details">
-                    <div className="detail-line">
-                        <span className="detail-label">STATUS:</span>
-                        <span className="detail-value" style={{ color: '#ff4757' }}>ACCESS_REVOKED</span>
+                <div className="result-stats-grid">
+                    <div className="stat-line">
+                        <span className="stat-label">STATUS</span>
+                        <span className="stat-val red">AURA DEPLETED</span>
                     </div>
-                    <div className="detail-line">
-                        <span className="detail-label">FINAL_STRENGTH:</span>
-                        <span className="detail-value">{userTeam === 'A' ? match.scoreA : match.scoreB}</span>
+                    <div className="stat-line">
+                        <span className="stat-label">FINAL PULL SCORE</span>
+                        <span className="stat-val">{userTeam === 'A' ? match.scoreA : match.scoreB}</span>
                     </div>
                 </div>
 
-                <div className="revoked-msg">
-                    <p>Terminal session has been terminated by the central core.</p>
-                </div>
-
-                <div className="button-v2">
-                    <a href="/crackTheCode" className="cyber-btn participation-btn">
-                        END GAME SESSION
+                <div className="result-actions">
+                    <a href="/crackTheCode" className="arena-action-btn secondary">
+                        EXIT ARENA
                     </a>
                 </div>
             </div>
@@ -359,26 +387,36 @@ const DismissedView = () => {
     }, [navigate]);
 
     return (
-        <div className="v2-emergency-fix dismissed-view">
-            <div className="cyber-grid-bg"></div>
-            <div className="dismissed-container">
-                <div className="warning-icon">⚠️</div>
-                <h1 className="result-title winner-text title-v2 warning-text">
-                    MATCH DISMISSED BY ADMIN
+        <div className="arena-result-view dismissed">
+            <div className="arena-result-card dismissed">
+                <div className="warning-icon">
+                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#F5A21F" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z" />
+                        <line x1="12" y1="9" x2="12" y2="13" />
+                        <line x1="12" y1="17" x2="12.01" y2="17" />
+                    </svg>
+                </div>
+                <div className="result-tag-row">
+                    <span className="result-phase-pill warning">SESSION DISMISSED</span>
+                </div>
+                <h1 className="result-main-title warning">
+                    MATCH CONCLUDED BY HOST
                 </h1>
-                <p className="result-subtitle">THE TERMINAL SESSION HAS BEEN REVOKED BY CENTRAL CONTROL.</p>
+                <p className="result-subtitle">
+                    ARENA SESSION HAS BEEN TERMINATED BY CENTRAL CONTROL.
+                </p>
 
                 <div className="dismissed-status">
                     <div className="status-pulse"></div>
-                    <span>Returning to lobby safely in {countdown}s...</span>
+                    <span>Returning to lobby in {countdown}s...</span>
                 </div>
 
                 <div className="progress-track">
                     <div className="progress-fill" style={{ width: `${(countdown / 5) * 100}%` }}></div>
                 </div>
 
-                <button className="cyber-btn winner-btn" onClick={() => navigate('/deadlock/lobby')}>
-                    RETURN TO LOBBY NOW
+                <button className="arena-action-btn primary" onClick={() => navigate('/deadlock/lobby')}>
+                    RETURN TO LOBBY
                 </button>
             </div>
         </div>
