@@ -2,45 +2,46 @@ import React from 'react';
 
 const ResultOverlay = React.memo(({ result, onClose }) => {
     React.useEffect(() => {
-        if (result) {
+        if (result && result.verdict !== 'AC') {
             const timer = setTimeout(() => {
                 onClose();
-            }, 3000);
+            }, 2500);
             return () => clearTimeout(timer);
         }
     }, [result?.verdict, onClose]);
 
-    if (!result) return null;
+    // Removed the "AURA SURGED" pop up on success - floating +1 AURA and rope momentum handle feedback
+    if (!result || result.verdict === 'AC') return null;
+
+    const isConflict = result.verdict === 'CONFLICT';
+    const isFailure = !isConflict;
 
     return (
         <div className="result-overlay-backdrop" onClick={onClose}>
-            <div className={`result-card verdict-${result.verdict} ${result.verdict === 'CONFLICT' ? 'result-card-warning' : ''}`} onClick={(e) => e.stopPropagation()}>
-                {result.verdict === 'AC' && (
-                    <div className="verdict-AC" data-text="ACCEPTED">ACCEPTED</div>
-                )}
-                {result.verdict === 'WRONG_ANSWER' && (
-                    <div className="verdict-WA">WRONG ANSWER</div>
-                )}
-                {result.verdict === 'RUNTIME_ERROR' && (
-                    <div className="verdict-RE">RUNTIME ERROR</div>
-                )}
-                {result.verdict === 'CONFLICT' && (
-                    <div className="verdict-CONFLICT" data-text="TOO SLOW!">TOO SLOW!</div>
-                )}
-                {result.verdict === 'ERROR' && (
-                    <div className="verdict-RE">ERROR</div>
+            <div
+                className={`result-card ${isConflict ? 'verdict-CONFLICT' : 'verdict-FAIL'}`}
+                onClick={(e) => e.stopPropagation()}
+            >
+                {isConflict && (
+                    <>
+                        <div className="verdict-headline conflict" data-text="TOO SLOW!">
+                            TOO SLOW!
+                        </div>
+                        <div className="verdict-subtext conflict">
+                            &gt; OPPONENT SOLVED FIRST // RELOADING NEW PROBLEM
+                        </div>
+                    </>
                 )}
 
-                {result.error && (
-                    <div style={{ color: '#aaa', marginTop: '1rem', whiteSpace: 'pre-wrap', textAlign: 'left', background: '#111', padding: '1rem', borderRadius: '4px', maxHeight: '200px', overflow: 'auto' }}>
-                        {result.error}
-                    </div>
-                )}
-
-                {result.verdict === 'CONFLICT' && (
-                    <div style={{ color: '#e0e0e0', marginTop: '1rem' }}>
-                        The question has changed. Reloading...
-                    </div>
+                {isFailure && (
+                    <>
+                        <div className="verdict-headline fail" data-text="TESTS FAILED">
+                            TESTS FAILED
+                        </div>
+                        <div className="verdict-subtext fail">
+                            &gt; EVALUATION FAILED // LOCK IN AND TRY AGAIN
+                        </div>
+                    </>
                 )}
             </div>
         </div>

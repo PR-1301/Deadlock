@@ -1,9 +1,8 @@
 import React from 'react';
 import Editor from "@monaco-editor/react";
-
 import useSecurity from '../../hooks/useSecurity';
 
-const CodePanel = ({ code, setCode, language, setLanguage, isLocked }) => {
+const CodePanel = ({ code, setCode, language, setLanguage, isLocked, onSubmitShortcut }) => {
     const teamName = localStorage.getItem('teamName') || 'UNKNOWN';
     const { security, reportAction } = useSecurity(teamName);
 
@@ -15,45 +14,71 @@ const CodePanel = ({ code, setCode, language, setLanguage, isLocked }) => {
         }
     };
 
+    const handleEditorDidMount = (editor, monaco) => {
+        // Register Ctrl+Enter and Cmd+Enter shortcut directly within Monaco editor
+        editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter, () => {
+            if (onSubmitShortcut && !isLocked) {
+                onSubmitShortcut();
+            }
+        });
+    };
 
     return (
-        <div className="code-panel">
-            <div className="editor-toolbar" style={{ padding: '0.5rem', background: '#1a1a1a', display: 'flex', gap: '1rem' }}>
-                <select
-                    value={language}
-                    onChange={(e) => setLanguage(e.target.value)}
-                    disabled={isLocked}
-                    style={{ padding: '4px', borderRadius: '4px', background: '#333', color: 'white', border: 'none' }}
-                >
-                    <option value="python">Python</option>
-                    <option value="cpp">C++</option>
-                    <option value="java">Java</option>
-                    {/* Add more as backend supports */}
-                </select>
-                {isLocked && <span style={{ color: '#ff4757' }}>LOCKED</span>}
+        <div className="clean-code-panel">
+            {/* Editor Toolbar */}
+            <div className="clean-editor-toolbar">
+                <div className="toolbar-left">
+                    <span className="toolbar-label">Language</span>
+                    <select
+                        className="clean-lang-select"
+                        value={language}
+                        onChange={(e) => setLanguage(e.target.value)}
+                        disabled={isLocked}
+                        aria-label="Language selector"
+                    >
+                        <option value="python">Python 3</option>
+                        <option value="cpp">C++ (GCC 17)</option>
+                        <option value="java">Java 17</option>
+                    </select>
+                </div>
+
+                <div className="toolbar-right">
+                    <div className="clean-integrity-badge" title="Integrity Lock: Anti-cheat security active">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                        </svg>
+                        <span>Integrity Lock</span>
+                    </div>
+                    {isLocked && <span className="clean-locked-pill">Locked</span>}
+                </div>
             </div>
-            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+
+            {/* Monaco Editor Container */}
+            <div className="clean-monaco-wrap" onPaste={handlePaste}>
                 <Editor
                     height="100%"
                     language={language}
                     theme="vs-dark"
                     value={code}
                     onChange={setCode}
+                    onMount={handleEditorDidMount}
                     options={{
                         readOnly: isLocked,
                         minimap: { enabled: false },
                         fontSize: 14,
+                        fontFamily: "'JetBrains Mono', 'Fira Code', 'Courier New', monospace",
                         scrollBeyondLastLine: false,
-                        padding: { top: 10 },
+                        padding: { top: 12, bottom: 12 },
+                        lineNumbersMinChars: 3,
                         contextmenu: !security.disableCopyPaste && !security.disableTextSelection,
                         copySelection: !security.disableCopyPaste,
                         links: false,
                         dragAndDrop: false,
-                        selectionClipboard: false
+                        selectionClipboard: false,
+                        automaticLayout: true,
                     }}
                 />
             </div>
-
         </div>
     );
 };

@@ -1,70 +1,21 @@
 import React from 'react';
+import celestiusLogo from '../../assets/celestius-logo.png';
+import larperOrCoderImg from '../../assets/larper-or-coder.png';
 
-const DeadlockHeader = ({ teamA, teamB, status, winner, userTeam, scoreA, scoreB }) => {
-    const getTeamId = (team) => team?._id || team;
-    const winnerId = getTeamId(winner);
-    const teamAId = getTeamId(teamA);
-    const teamBId = getTeamId(teamB);
-
+const DeadlockHeader = () => {
     return (
-        <header className="cyber-hud-header">
-            {/* Team Alpha HUD */}
-            <div className={`hud-team-sector alpha-sector ${winnerId && teamAId && winnerId === teamAId ? 'victory' : ''}`}>
-                <div className="hud-badge alpha-badge">
-                    <div className="badge-bg"></div>
-                    <span className="badge-label cyber-technical-label">ALPHA</span>
-                </div>
-                <div className="hud-team-info">
-                    <span className="hud-team-name">
-                        {teamA?.name || teamA?.teamName || "SYS_ERROR"}
-                    </span>
-                    <div className="hud-score-display cyber-technical-label">
-                        SCORE: <span className="score-value">{scoreA || 0}</span>
-                    </div>
-                    <div className="hud-data-lines">
-                        <div className="line"></div>
-                        <div className="line short"></div>
-                    </div>
+        <header className="arena-top-navbar">
+            <div className="nav-col left">
+                <img src={celestiusLogo} alt="Celestius" className="nav-celestius-logo" />
+            </div>
+            <div className="nav-col center">
+                <div className="nav-round-badge">
+                    <span className="nav-live-dot" />
+                    <span className="nav-round-text">ROUND 01 // TUG OF AURA</span>
                 </div>
             </div>
-
-            {/* Central HUD Core */}
-            <div className="hud-center-core">
-                <div className="core-frame">
-                    <div className="scanner-line"></div>
-                    <div className="status-display">
-                        {status === 'finished' ? (
-                            <span className="status-txt terminal-msg">CONNECTION LOST</span>
-                        ) : (
-                            <>
-                                <span className="status-txt blink cyber-technical-label">SECURE_LINK::UP</span>
-                                <div className="team-glory-msg">
-                                    {userTeam === 'A' ? "GO ALPHA" : (userTeam === 'B' ? "GO OMEGA" : "COMMENCING")}
-                                </div>
-                            </>
-                        )}
-                    </div>
-                </div>
-            </div>
-
-            {/* Team Omega HUD */}
-            <div className={`hud-team-sector omega-sector ${winnerId && teamBId && winnerId === teamBId ? 'victory' : ''}`}>
-                <div className="hud-team-info right">
-                    <span className="hud-team-name">
-                        {teamB?.name || teamB?.teamName || "SYS_ERROR"}
-                    </span>
-                    <div className="hud-score-display cyber-technical-label">
-                        SCORE: <span className="score-value">{scoreB || 0}</span>
-                    </div>
-                    <div className="hud-data-lines">
-                        <div className="line"></div>
-                        <div className="line short"></div>
-                    </div>
-                </div>
-                <div className="hud-badge omega-badge">
-                    <div className="badge-bg"></div>
-                    <span className="badge-label cyber-technical-label">OMEGA</span>
-                </div>
+            <div className="nav-col right">
+                <img src={larperOrCoderImg} alt="LARPER OR CODER" className="nav-larper-logo" />
             </div>
         </header>
     );
