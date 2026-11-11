@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import SceneBackground from '../components/Background/SceneBackground';
 import celestiusLogo from '../assets/celestius-logo.png';
 import larperOrCoderImg from '../assets/larper-or-coder.png';
+import GoatLogo from '../components/Goat/GoatLogo';
 import './CrackCodeLobby.css';
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL || `http://${window.location.hostname}:5000`;
@@ -12,11 +12,12 @@ const CrackCodeLobby = ({ onGameReady }) => {
     const [gameStatusLoading, setGameStatusLoading] = useState(true);
     const [teamStatus, setTeamStatus] = useState(null);
     const [globalStarted, setGlobalStarted] = useState(false);
+    const [elapsedSeconds, setElapsedSeconds] = useState(0);
 
     const teamId = localStorage.getItem("teamId");
     const teamName = localStorage.getItem("teamName") || "ALPHA DUO";
-
     const storedMembers = localStorage.getItem('teamMembers');
+
     const displayMembers = useMemo(() => {
         if (teamStatus?.members && Array.isArray(teamStatus.members) && teamStatus.members.length > 0) {
             return teamStatus.members;
@@ -32,6 +33,20 @@ const CrackCodeLobby = ({ onGameReady }) => {
 
     const [isDownloadingCertificates, setIsDownloadingCertificates] = useState(false);
     const [downloadError, setDownloadError] = useState(null);
+
+    // Elapsed clock
+    useEffect(() => {
+        const timer = setInterval(() => {
+            setElapsedSeconds((prev) => prev + 1);
+        }, 1000);
+        return () => clearInterval(timer);
+    }, []);
+
+    const formatTimer = (totalSec) => {
+        const m = Math.floor(totalSec / 60);
+        const s = totalSec % 60;
+        return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+    };
 
     const handleDownloadCertificates = async () => {
         if (!teamId || isDownloadingCertificates) return;
@@ -63,8 +78,9 @@ const CrackCodeLobby = ({ onGameReady }) => {
         }
     };
 
+    // Polling logic
     useEffect(() => {
-        document.title = "ROUND 02 // WHO'S THE GOAT? // Celestius";
+        document.title = "Who is the GOAT? · Round 02";
         if (!teamId) {
             setGameStatusLoading(false);
             return;
@@ -109,23 +125,34 @@ const CrackCodeLobby = ({ onGameReady }) => {
             }
         };
 
-        // Initial check
         pollEverything();
-
-        // Polling interval
         const intervalId = setInterval(pollEverything, 2000);
         return () => clearInterval(intervalId);
     }, [teamId, onGameReady]);
 
     if (gameStatusLoading) {
         return (
-            <div className="crack-lobby-viewport initializing">
-                <SceneBackground />
-                <div className="crack-lobby-loading-box">
-                    <div className="crack-radar-pulse" />
-                    <div className="crack-loader-title">INITIALIZING WHO'S THE GOAT?...</div>
-                    <div className="crack-loader-sub">CALIBRATING DUO CLEARANCE & SESSION MATRIX</div>
+            <div className="goat-page loading-screen">
+                <header className="brands">
+                    <img src={celestiusLogo} alt="Celestius" className="brand-icon cel-img" />
+                    <img src={larperOrCoderImg} alt="LARPER OR CODER" className="brand-icon lar-img" />
+                </header>
+                <div className="goat-hero-slot">
+                    <GoatLogo />
                 </div>
+                <main className="stage">
+                    <div className="num-col">
+                        <div className="rd">INIT</div>
+                        <div className="num">--</div>
+                    </div>
+                    <div className="info">
+                        <h1>Connecting<br />to arena.</h1>
+                        <p className="lede">Calibrating duo clearance & session matrix...</p>
+                        <div className="wait">
+                            <span>authorizing telemetry<i className="cur" /></span>
+                        </div>
+                    </div>
+                </main>
             </div>
         );
     }
@@ -133,260 +160,200 @@ const CrackCodeLobby = ({ onGameReady }) => {
     const result = teamStatus?.deadlockResult;
     const isWinner = result === 'win' || result === 'winner';
     const isLoser = result === 'lose';
-    const isWaiting = !result || result === 'pending';
+    const isOpen = isWinner && globalStarted;
+
+    const pageClasses = [
+        "goat-page",
+        isOpen ? "is-open" : "",
+        isLoser ? "is-loser" : "",
+        isWinner ? "is-winner" : "is-pending",
+    ].filter(Boolean).join(" ");
 
     return (
-        <div className="crack-lobby-viewport">
-            {/* Ambient code glyph particle background */}
-            <SceneBackground />
-
-            {/* Top Navbar matching the rest of the platform */}
-            <header className="crack-lobby-navbar">
-                <div className="navbar-brand-left">
-                    <img src={celestiusLogo} alt="Celestius" className="celestius-nav-logo" />
+        <div className={pageClasses} id="page">
+            {/* Header: Clean official brand logos (no redundant duplicate text) */}
+            <header className="brands">
+                <div className="brand-group cel-group">
+                    <img src={celestiusLogo} alt="Celestius" className="brand-icon cel-img" />
                 </div>
-                <div className="navbar-center-tag">
-                    <span className={`live-pulse-dot ${isWinner ? 'active' : isLoser ? 'error' : 'pending'}`} />
-                    <span className="navbar-tag-text">ROUND 02 // WHO'S THE GOAT?</span>
-                </div>
-                <div className="navbar-brand-right">
-                    <img src={larperOrCoderImg} alt="LARPER OR CODER" className="larper-coder-nav-logo" />
+                <div className="brand-group lar-group">
+                    <img src={larperOrCoderImg} alt="LARPER OR CODER" className="brand-icon lar-img" />
                 </div>
             </header>
 
-            {/* Main Stage */}
-            <main className="crack-lobby-main">
-                {/* Hero Section */}
-                <div className="crack-lobby-hero">
-                    <div className="hero-phase-badge">
-                        <span className="badge-dot" />
-                        <span>LOGIC DECRYPTION PROTOCOL</span>
+            {/* Round 02 Official Glitch Title Branding (Submerged & Sliced) */}
+            <div className="goat-hero-slot">
+                <GoatLogo />
+            </div>
+
+            {/* Sideways title down left margin */}
+            <aside className="side" aria-hidden="true">
+                <b>WHO IS THE GOAT?</b>
+                <span>
+                    {isWinner
+                        ? (isOpen ? 'arena session live' : 'qualified duo verified')
+                        : isLoser
+                            ? 'session finished'
+                            : 'awaiting referee audit'}
+                </span>
+            </aside>
+
+            {/* Main Stage: Balanced two-column layout */}
+            <main className="stage">
+                <div className="num-col" aria-label={isLoser ? 'Round 01' : 'Round 02'}>
+                    <div className="rd" aria-hidden="true">
+                        {isLoser ? 'COMPLETED' : 'ROUND'}
                     </div>
-                    <h1 className="hero-title">Who's the GOAT?</h1>
-                    <div className="hero-status-tag">
-                        {isWinner ? (
-                            globalStarted ? (
-                                <span className="status-highlight ready">
-                                    [ SESSION READY // WARPING INTO DECRYPTION PROTOCOL ]
-                                </span>
-                            ) : (
-                                <span className="status-highlight standby">
-                                    [ QUALIFIED DUO VERIFIED // AWAITING REFEREE SIGNAL ]
-                                </span>
-                            )
-                        ) : isLoser ? (
-                            <span className="status-highlight terminated">
-                                [ ROUND 01 CONCLUDED // SESSION FINISHED ]
-                            </span>
-                        ) : (
-                            <span className="status-highlight waiting">
-                                [ STANDBY // SYNCHRONIZING WITH CENTRAL SERVER ]
-                            </span>
-                        )}
+                    <div className="num">
+                        {isLoser ? '01' : '02'}
                     </div>
                 </div>
 
-                {/* 2-Column Content Grid */}
-                <div className="crack-lobby-grid">
-                    {/* Left Column: Team Dossier & Telemetry Core */}
-                    <div className="crack-column-left">
-                        {/* Duo Dossier Card */}
-                        <div className="crack-card dossier-card">
-                            <div className="card-top-bar">
-                                <span className="card-sub-tag">UNIT DOSSIER</span>
-                                <span className={`card-status-pill ${isWinner ? 'winner' : isLoser ? 'loser' : 'pending'}`}>
-                                    {isWinner ? 'QUALIFIED // ROUND 02' : isLoser ? 'ROUND 01 COMPLETED' : 'AWAITING AUDIT'}
+                <div className="info" aria-live="polite">
+                    {isWinner ? (
+                        isOpen ? (
+                            <>
+                                <h1 id="h">Round 02<br />is open.</h1>
+                                <p className="lede" id="lede">
+                                    Loading your editor now. Decryption environment is live.
+                                </p>
+                            </>
+                        ) : (
+                            <>
+                                <h1 id="h">Qualified.<br />Round 02 is next.</h1>
+                                <p className="lede" id="lede">
+                                    Your Round 01 win is confirmed. Stay on this page. The editor opens by itself once the referee launches the round.
+                                </p>
+                            </>
+                        )
+                    ) : isLoser ? (
+                        <>
+                            <h1 id="h">Thank you<br />for competing.</h1>
+                            <p className="lede" id="lede">
+                                Your duo fought hard in Round 01. Results have been finalized and recorded in the central tournament registry.
+                            </p>
+                        </>
+                    ) : (
+                        <>
+                            <h1 id="h">Awaiting<br />round audit.</h1>
+                            <p className="lede" id="lede">
+                                Match results are currently being recorded and verified. Stand by for referee signal.
+                            </p>
+                        </>
+                    )}
+
+                    {/* Dot-leader dossier displaying team name and team members */}
+                    <ul className="log" id="log">
+                        <li>
+                            <span>team</span>
+                            <span className="l"></span>
+                            <span className="ok">{displayTeamName}</span>
+                        </li>
+                        <li>
+                            <span>operative 01</span>
+                            <span className="l"></span>
+                            <span className="ok">{displayMembers[0] || 'Operative 01'}</span>
+                        </li>
+                        <li>
+                            <span>operative 02</span>
+                            <span className="l"></span>
+                            <span className="ok">{displayMembers[1] || 'Operative 02'}</span>
+                        </li>
+                        <li>
+                            <span>round 01</span>
+                            <span className="l"></span>
+                            <span className={isWinner ? 'ok' : isLoser ? 'warn' : 'lock'}>
+                                {isWinner ? 'won' : isLoser ? 'concluded' : 'auditing'}
+                            </span>
+                        </li>
+                        <li>
+                            <span>round 02</span>
+                            <span className="l"></span>
+                            <span className={isOpen ? 'ok' : isWinner ? 'lock' : 'term'}>
+                                {isOpen ? 'live' : isWinner ? 'locked' : 'eliminated'}
+                            </span>
+                        </li>
+                    </ul>
+
+                    {/* Status & Actions Area */}
+                    {isWinner ? (
+                        <div className="wait">
+                            <span id="w">
+                                {isOpen ? 'launching editor' : 'waiting for referee'}
+                                <i className="cur" />
+                            </span>
+                            {!isOpen && (
+                                <span className="time" id="clock">
+                                    {formatTimer(elapsedSeconds)}
                                 </span>
-                            </div>
-
-                            <div className="team-header-row">
-                                <div className="team-avatar-badge">
-                                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
-                                        <circle cx="9" cy="7" r="4" />
-                                        <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
-                                        <path d="M16 3.13a4 4 0 0 1 0 7.75" />
-                                    </svg>
-                                </div>
-                                <div className="team-meta-info">
-                                    <span className="team-meta-label">DUO NAME</span>
-                                    <h2 className="team-display-name">{displayTeamName}</h2>
-                                </div>
-                            </div>
-
-                            {/* Duo Operatives Chips */}
-                            <div className="team-operatives-group">
-                                <span className="operatives-label">REGISTERED DUO OPERATIVES</span>
-                                <div className="operatives-list">
-                                    <div className="operative-chip">
-                                        <span className="operative-idx">01</span>
-                                        <span className="operative-name">{displayMembers[0] || 'Operative 1'}</span>
-                                    </div>
-                                    <div className="operative-chip">
-                                        <span className="operative-idx">02</span>
-                                        <span className="operative-name">{displayMembers[1] || 'Operative 2'}</span>
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* Status Information Box */}
-                            <div className={`qualification-banner ${isWinner ? 'winner' : isLoser ? 'loser' : 'standby'}`}>
-                                <div className="banner-icon">
-                                    {isWinner ? (
-                                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#3DDC84" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                                            <polyline points="20 6 9 17 4 12" />
-                                        </svg>
-                                    ) : isLoser ? (
-                                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#FF4757" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                                            <line x1="18" y1="6" x2="6" y2="18" />
-                                            <line x1="6" y1="6" x2="18" y2="18" />
-                                        </svg>
-                                    ) : (
-                                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#F5A21F" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                                            <circle cx="12" cy="12" r="10" />
-                                            <polyline points="12 6 12 12 16 14" />
-                                        </svg>
-                                    )}
-                                </div>
-                                <div className="banner-content">
-                                    <div className="banner-title">
-                                        {isWinner
-                                            ? (globalStarted ? 'SESSION ACTIVE // ACCESS UNLOCKED' : 'QUALIFICATION VERIFIED')
-                                            : isLoser
-                                                ? 'MISSION FINISHED'
-                                                : 'AWAITING ARENA RESULT'}
-                                    </div>
-                                    <div className="banner-desc">
-                                        {isWinner
-                                            ? (globalStarted
-                                                ? 'Decryption environment is ready. Synchronizing problem logic...'
-                                                : 'Your victory in Round 01 is confirmed. Waiting for central referee to globally begin Round 02.')
-                                            : isLoser
-                                                ? 'Great fight in Round 01. Your team is not advancing to Round 02.'
-                                                : 'Match results are currently being recorded and confirmed.'}
-                                    </div>
-                                </div>
-                            </div>
-
-                            {isLoser && (
-                                <div className="dossier-actions">
-                                    <button onClick={() => navigate('/')} className="exit-lobby-btn">
-                                        EXIT TO HOME
-                                    </button>
-                                </div>
                             )}
                         </div>
-                    </div>
-
-                    {/* Right Column: Qualification Announcement or Farewell Card */}
-                    <div className="crack-column-right">
-                        {(!globalStarted || isWinner) && !isLoser ? (
-                            <div className="crack-card qualified-card">
-                                <div className="card-top-bar">
-                                    <span className="card-sub-tag">ROUND 02 CLEARANCE</span>
-                                    <span className="card-status-pill winner">QUALIFIED</span>
-                                </div>
-
-                                <div className="qualified-card-content">
-                                    <div className="qualified-trophy-badge">
-                                        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#F5A21F" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                            <path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6" />
-                                            <path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18" />
-                                            <path d="M4 22h16" />
-                                            <path d="M10 14.66V17c0 .55-.45 1-1 1H7c-.55 0-1-.45-1-1v-2.34" />
-                                            <path d="M14 14.66V17c0 .55.45 1 1 1h2c.55 0 1-.45 1-1v-2.34" />
-                                            <path d="M18 2H6v7a6 6 0 0 0 12 0V2Z" />
+                    ) : isLoser ? (
+                        <div className="loser-actions">
+                            <button
+                                onClick={handleDownloadCertificates}
+                                disabled={isDownloadingCertificates}
+                                className="cert-btn"
+                                title="Download both team member certificates"
+                            >
+                                {isDownloadingCertificates ? (
+                                    <>
+                                        <i className="cur" />
+                                        <span>GENERATING CERTIFICATES...</span>
+                                    </>
+                                ) : (
+                                    <>
+                                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                                            <polyline points="7 10 12 15 17 10" />
+                                            <line x1="12" y1="15" x2="12" y2="3" />
                                         </svg>
-                                    </div>
+                                        <span>DOWNLOAD PARTICIPATION CERTIFICATES</span>
+                                    </>
+                                )}
+                            </button>
 
-                                    <h2 className="qualified-title">CONGRATULATIONS!</h2>
-                                    <p className="qualified-main-msg">
-                                        YOU ARE QUALIFIED FOR THE NEXT ROUND.
-                                    </p>
+                            {downloadError && (
+                                <div className="cert-error">{downloadError}</div>
+                            )}
 
-                                    <div className="qualified-wait-box">
-                                        <div className="wait-box-pulse">
-                                            <span className="wait-pulse-ring" />
-                                            <span className="wait-pulse-core" />
-                                        </div>
-                                        <div className="wait-box-text">
-                                            <div className="wait-box-primary">WAIT UNTIL THE ADMIN LETS YOU IN.</div>
-                                            <div className="wait-box-secondary">
-                                                Session is locked until referee authorizes round launch. Editor will initialize automatically.
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div className="directives-card-footer">
-                                    <div className="footer-status-item">
-                                        <span className="footer-dot green" />
-                                        <span>INTEGRITY MONITOR: ACTIVE</span>
-                                    </div>
-                                    <div className="footer-status-item">
-                                        <span className="footer-dot yellow" />
-                                        <span>STANDBY // AWAITING HOST SIGNAL</span>
-                                    </div>
-                                </div>
-                            </div>
-                        ) : (
-                            <div className="crack-card farewell-card">
-                                <div className="farewell-badge">
-                                    <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#F5A21F" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                        <path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6" />
-                                        <path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18" />
-                                        <path d="M4 22h16" />
-                                        <path d="M10 14.66V17c0 .55-.45 1-1 1H7c-.55 0-1-.45-1-1v-2.34" />
-                                        <path d="M14 14.66V17c0 .55.45 1 1 1h2c.55 0 1-.45 1-1v-2.34" />
-                                        <path d="M18 2H6v7a6 6 0 0 0 12 0V2Z" />
-                                    </svg>
-                                </div>
-                                <h2 className="farewell-title">THANK YOU FOR COMPETING</h2>
-                                <p className="farewell-subtitle">
-                                    CELESTIUS 2026 // LARPER OR CODER
-                                </p>
-                                <div className="farewell-description">
-                                    Your duo fought hard in Round 01. Results have been finalized and recorded in the central tournament registry.
-                                </div>
-                                <div className="farewell-actions">
-                                    <button
-                                        onClick={handleDownloadCertificates}
-                                        disabled={isDownloadingCertificates}
-                                        className="download-cert-btn"
-                                        title="Download your participation certificates"
-                                    >
-                                        {isDownloadingCertificates ? (
-                                            <>
-                                                <span className="cert-spinner" />
-                                                <span>GENERATING CERTIFICATES...</span>
-                                            </>
-                                        ) : (
-                                            <>
-                                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                                                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                                                    <polyline points="7 10 12 15 17 10" />
-                                                    <line x1="12" y1="15" x2="12" y2="3" />
-                                                </svg>
-                                                <span>DOWNLOAD PARTICIPATION CERTIFICATES</span>
-                                            </>
-                                        )}
-                                    </button>
-
-                                    {downloadError && (
-                                        <div className="cert-download-error">
-                                            {downloadError}
-                                        </div>
-                                    )}
-
-                                    <button onClick={() => navigate('/')} className="exit-lobby-btn secondary">
-                                        RETURN TO HOMEPAGE &rarr;
-                                    </button>
-                                </div>
-                            </div>
-                        )}
-                    </div>
+                            <button onClick={() => navigate('/')} className="home-link">
+                                RETURN TO HOMEPAGE &rarr;
+                            </button>
+                        </div>
+                    ) : (
+                        <div className="wait">
+                            <span>synchronizing with arena<i className="cur" /></span>
+                            <span className="time">{formatTimer(elapsedSeconds)}</span>
+                        </div>
+                    )}
                 </div>
             </main>
+
+            {/* Tournament Progress Route Bar: Only Round 1 and Round 2 (Final) */}
+            <footer className="route" aria-label="Tournament progress">
+                {isWinner ? (
+                    <>
+                        <span className="won">R1 won</span>
+                        <span className="seg done"></span>
+                        <span className={isOpen ? 'ok' : 'on'}>
+                            {isOpen ? 'R2 live' : 'R2 waiting'}
+                        </span>
+                    </>
+                ) : isLoser ? (
+                    <>
+                        <span className="won">R1 played</span>
+                        <span className="seg done"></span>
+                        <span className="term">R2 concluded</span>
+                    </>
+                ) : (
+                    <>
+                        <span className="on">R1 audit</span>
+                        <span className="seg"></span>
+                        <span>R2 (Final)</span>
+                    </>
+                )}
+            </footer>
         </div>
     );
 };
