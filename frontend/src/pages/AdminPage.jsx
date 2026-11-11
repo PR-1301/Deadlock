@@ -282,11 +282,21 @@ const AdminPage = () => {
             <div className="admin-grid-overlay"></div>
 
             <div className="admin-container">
-                {toast && (
-                    <div className={`cyber-toast ${toast.toLowerCase().includes('failed') ? 'error' : 'success'}`}>
-                        {toast}
-                    </div>
-                )}
+                {toast && (() => {
+                    const isError = toast.toLowerCase().includes('failed') || toast.toLowerCase().includes('invalid') || toast.toLowerCase().includes('not enough');
+                    return (
+                        <div className={`cyber-toast ${isError ? 'error' : 'success'}`} role="status">
+                            <span className="admin-toast-corner tl" aria-hidden="true" />
+                            <span className="admin-toast-corner tr" aria-hidden="true" />
+                            <span className="admin-toast-corner bl" aria-hidden="true" />
+                            <span className="admin-toast-corner br" aria-hidden="true" />
+                            <span className="admin-toast-chip">
+                                <span>{isError ? 'ERR' : 'OK'}</span>
+                            </span>
+                            <span className="admin-toast-text">{toast}</span>
+                        </div>
+                    );
+                })()}
 
                 <header className="admin-header">
                     <div className="header-brand">

@@ -1,36 +1,65 @@
 // Admin session helpers.
-// The passcode is checked by the backend; the browser only keeps the signed token it returns.
+// The passcode is checked by the backend; the browser only keeps the signed token in sessionStorage.
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL || "";
 const TOKEN_KEY = 'deadlockAdminToken';
 const EXPIRES_KEY = 'deadlockAdminTokenExpiresAt';
 
 const safeGet = (key) => {
-    try { return localStorage.getItem(key); } catch { return null; }
+    try { return sessionStorage.getItem(key); } catch { return null; }
 };
 
-export const getAdminToken = () => {
-    const token = safeGet(TOKEN_KEY);
-    const expiresAt = Number(safeGet(EXPIRES_KEY));
-    if (!token || !expiresAt || Date.now() >= expiresAt) return null;
-    return token;
+const parseTokenExp = (token) => {
+    if (typeof token !== 'string') return 0;
+    const [payload] = token.split('.');
+    if (!payload) return 0;
+    try {
+        const base64 = payload.replace(/-/g, '+').replace(/_/g, '/');
+        const json = atob(base64.padEnd(Math.ceil(base64.length / 4) * 4, '='));
+        const data = JSON.parse(json);
+        return typeof data?.exp === 'number' ? data.exp : 0;
+    } catch {
+        return 0;
+    }
 };
-
-export const isAdminAuthenticated = () => !!getAdminToken();
 
 export const clearAdminSession = () => {
     try {
+        sessionStorage.removeItem(TOKEN_KEY);
+        sessionStorage.removeItem(EXPIRES_KEY);
         localStorage.removeItem(TOKEN_KEY);
         localStorage.removeItem(EXPIRES_KEY);
         localStorage.removeItem('deadlockAdminAuth'); // legacy flag from the old client-side login
     } catch { /* storage unavailable */ }
 };
 
-// Called when the backend rejects the token (expired, passcode rotated, ...)
-export const handleAdminUnauthorized = () => {
+export const getAdminTokenExpiry = () => {
+    const token = safeGet(TOKEN_KEY);
+    if (!token) return 0;
+    const tokenExp = parseTokenExp(token);
+    const storedExp = Number(safeGet(EXPIRES_KEY));
+    if (!tokenExp || !storedExp) return 0;
+    return Math.min(tokenExp, storedExp);
+};
+
+export const getAdminToken = () => {
+    const token = safeGet(TOKEN_KEY);
+    const expiresAt = getAdminTokenExpiry();
+    if (!token || !expiresAt || Date.now() >= expiresAt) {
+        if (token) clearAdminSession();
+        return null;
+    }
+    return token;
+};
+
+export const isAdminAuthenticated = () => !!getAdminToken();
+
+// Called when the backend rejects the token (expired, revoked, passcode rotated, ...)
+export const handleAdminUnauthorized = (reason = 'expired') => {
     clearAdminSession();
     if (!window.location.pathname.startsWith('/admin/login')) {
-        window.location.assign('/admin/login');
+        const suffix = reason === 'expired' ? '?expired=1' : '';
+        window.location.assign(`/admin/login${suffix}`);
     }
 };
 
@@ -44,9 +73,43 @@ export const adminLogin = async (passcode) => {
     if (!response.ok) {
         throw new Error(data.message || 'ACCESS DENIED: INVALID CREDENTIALS');
     }
-    localStorage.setItem(TOKEN_KEY, data.token);
-    localStorage.setItem(EXPIRES_KEY, String(data.expiresAt));
+    clearAdminSession();
+    sessionStorage.setItem(TOKEN_KEY, data.token);
+    sessionStorage.setItem(EXPIRES_KEY, String(data.expiresAt));
     return data;
+};
+
+export const verifyAdminSession = async () => {
+    const token = getAdminToken();
+    if (!token) return false;
+    try {
+        const response = await fetch(`${BASE_URL}/api/admin/auth/verify`, {
+            method: 'GET',
+            headers: { Authorization: `Bearer ${token}` },
+        });
+        if (response.status === 401 || response.status === 403) {
+            clearAdminSession();
+            return false;
+        }
+        return response.ok;
+    } catch {
+        // On transient network failure, rely on local signed token expiry
+        return !!getAdminToken();
+    }
+};
+
+export const adminLogout = async () => {
+    const token = getAdminToken();
+    clearAdminSession();
+    if (!token) return;
+    try {
+        await fetch(`${BASE_URL}/api/admin/auth/logout`, {
+            method: 'POST',
+            headers: { Authorization: `Bearer ${token}` },
+        });
+    } catch {
+        // Session already cleared locally
+    }
 };
 
 export const adminAuthHeaders = () => {

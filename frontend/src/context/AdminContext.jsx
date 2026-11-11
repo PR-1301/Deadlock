@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { io } from 'socket.io-client';
-import { getAdminToken } from '../api/adminAuth';
+import { getAdminToken, handleAdminUnauthorized } from '../api/adminAuth';
 
 const AdminContext = createContext();
 
@@ -31,6 +31,11 @@ export const AdminProvider = ({ children }) => {
 
         socketRef.current.on('new-log', (log) => {
             setLogs(prev => [log, ...prev].slice(0, 100)); // Keep last 100 logs
+        });
+
+        socketRef.current.on('admin-auth-error', () => {
+            setConnected(false);
+            handleAdminUnauthorized('expired');
         });
 
         socketRef.current.on('connect_error', (err) => {
