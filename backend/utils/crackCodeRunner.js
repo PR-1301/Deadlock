@@ -1,5 +1,5 @@
 const crypto = require("crypto");
-const { runCode } = require("./piston");
+const { runCode, isOciContainerError } = require("./piston");
 const { FUNCTION_NAME } = require("../config/crackCodeQuestions");
 
 const SUPPORTED_LANGUAGES = ["python", "javascript", "cpp", "java"];
@@ -214,21 +214,23 @@ const parseOutput = (stdout, nonce, count) => {
 
 const normalize = (s) => String(s).replace(/\s+/g, "");
 
-const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
-
-// Wandbox rate-limits bursts with HTTP 429: back off and retry a few times.
-const runWithRetry = async (payload, retries = 3) => {
-  for (let attempt = 0; ; attempt++) {
-    try {
-      return await runCode(payload);
-    } catch (err) {
-      const status = err.response && err.response.status;
-      if (status !== 429 || attempt >= retries) {
-        if (status === 429) err.code = "EXECUTOR_BUSY";
-        throw err;
-      }
-      await sleep(1000 * 2 ** attempt + Math.random() * 500);
+// Retries are handled inside piston.js; map exhausted rate/container limits to EXECUTOR_BUSY.
+const executeWithBusyHandling = async (payload) => {
+  try {
+    const exec = await runCode(payload);
+    const stderr = (exec.run.stderr || "").trim();
+    if (isOciContainerError(stderr)) {
+      const busyErr = new Error(stderr);
+      busyErr.code = "EXECUTOR_BUSY";
+      throw busyErr;
     }
+    return exec;
+  } catch (err) {
+    const status = err.response && err.response.status;
+    if (status === 429 || status === 502 || status === 503 || status === 504) {
+      err.code = "EXECUTOR_BUSY";
+    }
+    throw err;
   }
 };
 
@@ -240,7 +242,7 @@ const runCases = async ({ language, code, question, cases }) => {
   const nonce = `CC${crypto.randomBytes(8).toString("hex")}`;
   const { source, stdin } = buildProgram({ language, code, question, cases, nonce });
 
-  const exec = await runWithRetry({ language, code: source, input: stdin });
+  const exec = await executeWithBusyHandling({ language, code: source, input: stdin });
   const stdout = exec.run.stdout || "";
   const stderr = (exec.run.stderr || "").trim();
 

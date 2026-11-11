@@ -267,15 +267,22 @@ router.post("/submit", async (req, res) => {
 
     if (!autoSubmit) {
       const question = sessionQuestion(session);
+      const visibleCases = question.testCases || [];
+      const hiddenCases = question.hiddenTestCases || [];
 
-      // Run visible cases first
-      const visibleResults = await runCases({
+      // Run visible + hidden cases in a single container execution to cut runner load in half.
+      // Hidden results stay strictly on the server and are never returned to the client.
+      const allResults = await runCases({
         language,
         code: submittedLogic,
         question,
-        cases: question.testCases,
+        cases: [...visibleCases, ...hiddenCases],
       });
+
+      const visibleResults = allResults.slice(0, visibleCases.length);
+      const hiddenResults = allResults.slice(visibleCases.length);
       const allVisiblePassed = visibleResults.every((r) => r.isCorrect);
+      const allHiddenPassed = hiddenCases.length === 0 || hiddenResults.every((r) => r.isCorrect);
 
       if (!allVisiblePassed) {
         const visiblePassedCount = visibleResults.filter((r) => r.isCorrect).length;
@@ -288,7 +295,7 @@ router.post("/submit", async (req, res) => {
           crackCodeSessionId: session._id,
           input: `${question.id} [${language}] (submit)`,
           code: submittedLogic,
-          output: `visible ${visiblePassedCount}/${visibleResults.length}, hidden not run`,
+          output: `visible ${visiblePassedCount}/${visibleResults.length}, hidden not verified`,
           attemptNumber: session.attemptsUsed,
         });
 
@@ -299,19 +306,6 @@ router.post("/submit", async (req, res) => {
           results: visibleResults,
           message: "Visible testcases failed. Please fix and run again.",
         });
-      }
-
-      // Visible cases passed — now run hidden testcases on server
-      const hiddenCases = question.hiddenTestCases || [];
-      let allHiddenPassed = true;
-      if (hiddenCases.length > 0) {
-        const hiddenResults = await runCases({
-          language,
-          code: submittedLogic,
-          question,
-          cases: hiddenCases,
-        });
-        allHiddenPassed = hiddenResults.every((r) => r.isCorrect);
       }
 
       if (!allHiddenPassed) {
