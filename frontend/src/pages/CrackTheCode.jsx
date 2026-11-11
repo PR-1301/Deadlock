@@ -7,17 +7,27 @@ import larperOrCoderImg from '../assets/larper-or-coder.png';
 import './CrackTheCode.css';
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL || `http://${window.location.hostname}:5000`;
-const SUPPORTED_LANGUAGES = ['python', 'cpp', 'javascript', 'java'];
+const LANGUAGE_OPTIONS = [
+    { value: 'python', label: 'Python', tag: 'py3' },
+    { value: 'cpp', label: 'C++', tag: 'gcc' },
+    { value: 'javascript', label: 'JavaScript', tag: 'node' },
+    { value: 'java', label: 'Java', tag: 'jdk' },
+];
+const SUPPORTED_LANGUAGES = LANGUAGE_OPTIONS.map((opt) => opt.value);
+const RESULT_REVEAL_DELAY_MS = 250;
 
 const getDraftStorageKey = (teamId, sessionId) =>
     `crackCodeDraft:${teamId || 'anon'}:${sessionId || 'default'}`;
 
+const getStarterStorageKey = (teamId, sessionId) =>
+    `crackCodeStarter:${teamId || 'anon'}:${sessionId || 'default'}`;
+
 const getLangStorageKey = (teamId, sessionId) =>
     `crackCodeLang:${teamId || 'anon'}:${sessionId || 'default'}`;
 
-const readStoredDrafts = (teamId, sessionId) => {
+const readStoredCodeMap = (storageKey) => {
     try {
-        const raw = localStorage.getItem(getDraftStorageKey(teamId, sessionId));
+        const raw = localStorage.getItem(storageKey);
         if (!raw) return {};
         const parsed = JSON.parse(raw);
         if (!parsed || typeof parsed !== 'object') return {};
@@ -33,13 +43,25 @@ const readStoredDrafts = (teamId, sessionId) => {
     }
 };
 
-const writeStoredDrafts = (teamId, sessionId, codeMapObj) => {
+const writeStoredCodeMap = (storageKey, codeMapObj) => {
     try {
-        localStorage.setItem(getDraftStorageKey(teamId, sessionId), JSON.stringify(codeMapObj));
+        localStorage.setItem(storageKey, JSON.stringify(codeMapObj));
     } catch {
         // Ignore storage quota errors
     }
 };
+
+const readStoredDrafts = (teamId, sessionId) =>
+    readStoredCodeMap(getDraftStorageKey(teamId, sessionId));
+
+const writeStoredDrafts = (teamId, sessionId, codeMapObj) =>
+    writeStoredCodeMap(getDraftStorageKey(teamId, sessionId), codeMapObj);
+
+const readStoredStarter = (teamId, sessionId) =>
+    readStoredCodeMap(getStarterStorageKey(teamId, sessionId));
+
+const writeStoredStarter = (teamId, sessionId, starterObj) =>
+    writeStoredCodeMap(getStarterStorageKey(teamId, sessionId), starterObj);
 
 // Question (starter code + visible test cases) is served by the backend with the session.
 // Running and grading happen server-side; hidden test cases never reach the browser.
@@ -51,12 +73,6 @@ const GameHeader = React.memo(({ teamName, initialTime, isGameStarted, submissio
     React.useEffect(() => {
         setSecondsLeft(initialTime);
     }, [initialTime]);
-
-    const formatTime = (seconds) => {
-        const mins = Math.floor(seconds / 60);
-        const secs = seconds % 60;
-        return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-    };
 
     React.useEffect(() => {
         if (!isGameStarted || secondsLeft <= 0 || submissionResult) return;
@@ -74,6 +90,15 @@ const GameHeader = React.memo(({ teamName, initialTime, isGameStarted, submissio
 
         return () => clearInterval(timerId);
     }, [isGameStarted, submissionResult, onExpire]);
+
+    const mins = Math.floor(secondsLeft / 60).toString().padStart(2, '0');
+    const secs = (secondsLeft % 60).toString().padStart(2, '0');
+    const timerTone = secondsLeft > 1200 ? 'is-calm' : (secondsLeft > 300 ? 'is-warn' : 'is-critical');
+    const totalDuration = 30 * 60;
+    const progressRatio = Math.max(0, Math.min(1, secondsLeft / totalDuration));
+    const ringRadius = 9;
+    const ringCircumference = 2 * Math.PI * ringRadius;
+    const ringOffset = ringCircumference * (1 - progressRatio);
 
     const teamId = localStorage.getItem('teamId');
     const isOwner = glitchStatus?.ownerId === teamId;
@@ -107,17 +132,56 @@ const GameHeader = React.memo(({ teamName, initialTime, isGameStarted, submissio
                     </div>
                 )}
 
-                <div className="arena-timer">
-                    <svg className="arena-timer-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                        <circle cx="12" cy="12" r="10" />
-                        <polyline points="12 6 12 12 16 14" />
+                <div
+                    className={`arena-timer ${timerTone} ${secondsLeft <= 0 || submissionResult ? 'is-paused' : ''}`}
+                    aria-label={`Time remaining ${mins}:${secs}`}
+                >
+                    <svg className="arena-timer-ring" width="24" height="24" viewBox="0 0 24 24" aria-hidden="true">
+                        <circle
+                            className="arena-timer-ring-track"
+                            cx="12"
+                            cy="12"
+                            r={ringRadius}
+                            fill="none"
+                            strokeWidth="2.1"
+                        />
+                        <circle
+                            className="arena-timer-ring-progress"
+                            cx="12"
+                            cy="12"
+                            r={ringRadius}
+                            fill="none"
+                            strokeWidth="2.1"
+                            strokeLinecap="round"
+                            strokeDasharray={ringCircumference}
+                            strokeDashoffset={ringOffset}
+                            transform="rotate(-90 12 12)"
+                        />
+                        <line
+                            className="arena-timer-clock-hand-min"
+                            x1="12"
+                            y1="12"
+                            x2="12"
+                            y2="8.4"
+                            strokeWidth="1.5"
+                            strokeLinecap="round"
+                        />
+                        <line
+                            className="arena-timer-clock-hand-sec"
+                            x1="12"
+                            y1="12"
+                            x2="12"
+                            y2="6.8"
+                            strokeWidth="1.3"
+                            strokeLinecap="round"
+                        />
+                        <circle className="arena-timer-clock-pivot" cx="12" cy="12" r="1.2" />
                     </svg>
                     <span className="arena-timer-label">Time</span>
-                    <span
-                        className="arena-timer-value"
-                        style={{ color: secondsLeft > 1200 ? '#3ddc97' : (secondsLeft > 300 ? '#f5a524' : '#ff4757') }}
-                    >
-                        {formatTime(secondsLeft)}
+                    <span className="arena-timer-value">
+                        <span>{mins}</span>
+                        <span className="arena-timer-colon">:</span>
+                        <span>{secs}</span>
                     </span>
                 </div>
 
@@ -141,11 +205,13 @@ const CrackTheCode = () => {
 
     const [testCases, setTestCases] = useState([]);
     const [codeMap, setCodeMap] = useState({});
+    const [starterCodeMap, setStarterCodeMap] = useState({});
     const [activeTestCase, setActiveTestCase] = useState(0);
 
     // Timer State
     const [timeLeft, setTimeLeft] = useState(30 * 60); // 30 minutes in seconds
     const [isGameStarted, setIsGameStarted] = useState(false);
+    const [introStage, setIntroStage] = useState('idle'); // 'idle' | 'showing' | 'exiting'
     const [sessionId, setSessionId] = useState(null);
     const [submissionResult, setSubmissionResult] = useState(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -159,12 +225,89 @@ const CrackTheCode = () => {
     // { language, code } of the last run that passed every visible + hidden case
     const [lastValidated, setLastValidated] = useState(null);
     const latestCodeRef = React.useRef({});
+    const revealTimersRef = React.useRef([]);
+    const introTimersRef = React.useRef([]);
+
+    const clearIntroTimers = React.useCallback(() => {
+        introTimersRef.current.forEach((id) => clearTimeout(id));
+        introTimersRef.current = [];
+    }, []);
+
+    useEffect(() => clearIntroTimers, [clearIntroTimers]);
+
+    const clearRevealTimers = React.useCallback(() => {
+        revealTimersRef.current.forEach((id) => clearTimeout(id));
+        revealTimersRef.current = [];
+    }, []);
+
+    useEffect(() => clearRevealTimers, [clearRevealTimers]);
+
+    // Reveal testcase results sequentially (Case 1 immediately, then +250ms per case).
+    const revealResultsSequentially = React.useCallback((rawResults, onComplete) => {
+        clearRevealTimers();
+
+        const mapped = (rawResults || []).map((r) => {
+            const isErr = r.result === "Runtime Error" || r.result === "Error";
+            return { ...r, status: isErr ? "error" : "success" };
+        });
+
+        if (mapped.length === 0) {
+            setTestResults({});
+            onComplete();
+            return;
+        }
+
+        setTestResults({ 0: mapped[0] });
+
+        if (mapped.length === 1) {
+            onComplete();
+            return;
+        }
+
+        mapped.slice(1).forEach((item, offset) => {
+            const index = offset + 1;
+            const timerId = setTimeout(() => {
+                setTestResults((prev) => ({ ...prev, [index]: item }));
+                if (index === mapped.length - 1) {
+                    revealTimersRef.current = [];
+                    onComplete();
+                }
+            }, index * RESULT_REVEAL_DELAY_MS);
+            revealTimersRef.current.push(timerId);
+        });
+    }, [clearRevealTimers]);
 
     useEffect(() => {
         if (isGameStarted) {
             document.title = "Who's the GOAT? // Celestius";
         }
     }, [isGameStarted]);
+
+    // Backfill default starter boilerplate if the active session resumed without it (e.g. HMR).
+    useEffect(() => {
+        if (!isGameStarted || Object.keys(starterCodeMap).length > 0) return;
+        const teamId = localStorage.getItem('teamId');
+        if (!teamId) return;
+
+        const cached = readStoredStarter(teamId, sessionId);
+        if (Object.keys(cached).length > 0) {
+            Promise.resolve().then(() => setStarterCodeMap(cached));
+            return;
+        }
+
+        let cancelled = false;
+        fetch(`${BASE_URL}/api/public/crack-code/session/${teamId}?cb=${Date.now()}`)
+            .then((res) => (res.ok ? res.json() : null))
+            .then((data) => {
+                if (cancelled || !data?.question?.starterCode) return;
+                writeStoredStarter(teamId, data.sessionId || sessionId, data.question.starterCode);
+                setStarterCodeMap(data.question.starterCode);
+            })
+            .catch(() => {});
+        return () => {
+            cancelled = true;
+        };
+    }, [isGameStarted, sessionId, starterCodeMap]);
 
     // DISMISSAL STATE
     const [isDismissed, setIsDismissed] = useState(false);
@@ -245,8 +388,9 @@ const CrackTheCode = () => {
     // This prevents high-frequency renders (keystrokes) from resetting the timer
     const handleSubmitRef = React.useRef();
 
-    const handleLanguageChange = React.useCallback((e) => {
-        const nextLang = e.target.value;
+    const handleLanguageChange = React.useCallback((next) => {
+        const nextLang = typeof next === 'string' ? next : next?.target?.value;
+        if (!nextLang) return;
         setLanguage(nextLang);
         try {
             const teamId = localStorage.getItem('teamId');
@@ -270,6 +414,21 @@ const CrackTheCode = () => {
         latestCodeRef.current[lang] = value;
         const teamId = localStorage.getItem('teamId');
         writeStoredDrafts(teamId, sessionId, latestCodeRef.current);
+    }, [sessionId]);
+
+    const handleResetLanguage = React.useCallback((lang, freshCode) => {
+        latestCodeRef.current = {
+            ...latestCodeRef.current,
+            [lang]: freshCode,
+        };
+        const teamId = localStorage.getItem('teamId');
+        writeStoredDrafts(teamId, sessionId, latestCodeRef.current);
+        setCodeMap((prev) => ({
+            ...prev,
+            [lang]: freshCode,
+        }));
+        setLastValidated((prev) => (prev?.language === lang ? null : prev));
+        setSubmitError(null);
     }, [sessionId]);
 
     const handleEditorDidMount = React.useCallback((editor, monaco) => {
@@ -306,6 +465,7 @@ const CrackTheCode = () => {
             return;
         }
 
+        clearRevealTimers();
         const code = latestCodeRef.current[language] ?? codeMap[language] ?? "";
         setCodeMap((prev) => (prev[language] === code ? prev : { ...prev, [language]: code }));
         setIsRunning(true);
@@ -333,16 +493,19 @@ const CrackTheCode = () => {
                 });
                 setTestResults(failed);
                 setLastValidated(null);
+                setIsRunning(false);
                 return;
             }
 
-            const results = {};
-            (data.results || []).forEach((r, i) => {
-                const isErr = r.result === "Runtime Error" || r.result === "Error";
-                results[i] = { ...r, status: isErr ? "error" : "success" };
+            const resultsList = data.results || [];
+            revealResultsSequentially(resultsList, () => {
+                const firstWrongIndex = resultsList.findIndex((r) => !r.isCorrect);
+                if (firstWrongIndex !== -1) {
+                    setActiveTestCase(firstWrongIndex);
+                }
+                setLastValidated(data.validated ? { language, code } : null);
+                setIsRunning(false);
             });
-            setTestResults(results);
-            setLastValidated(data.validated ? { language, code } : null);
         } catch (error) {
             const errMsg = error?.message ? `Network Error: ${error.message}` : "Network error while executing code.";
             setRunError(errMsg);
@@ -352,10 +515,9 @@ const CrackTheCode = () => {
             });
             setTestResults(failed);
             setLastValidated(null);
-        } finally {
             setIsRunning(false);
         }
-    }, [language, codeMap, testCases]);
+    }, [language, codeMap, testCases, clearRevealTimers, revealResultsSequentially]);
 
     const handleSubmit = React.useCallback(async (isAutoSubmit = false) => {
         const teamId = localStorage.getItem("teamId");
@@ -364,6 +526,8 @@ const CrackTheCode = () => {
             return;
         }
 
+        clearRevealTimers();
+        setIsRunning(false);
         const code = latestCodeRef.current[language] ?? codeMap[language] ?? "";
         setCodeMap((prev) => (prev[language] === code ? prev : { ...prev, [language]: code }));
         setIsSubmitting(true);
@@ -372,6 +536,7 @@ const CrackTheCode = () => {
             setLeftTab('result');
             setRunError(null);
             setHiddenTestResult(null);
+            setTestResults({});
         }
 
         try {
@@ -390,21 +555,28 @@ const CrackTheCode = () => {
             const data = await response.json().catch(() => ({}));
             if (response.ok) {
                 if (data.passed === false && !isAutoSubmit) {
+                    const finalizeFailedSubmit = () => {
+                        if (Array.isArray(data.results)) {
+                            const firstWrongIndex = data.results.findIndex((r) => !r.isCorrect);
+                            if (firstWrongIndex !== -1) {
+                                setActiveTestCase(firstWrongIndex);
+                            }
+                        }
+                        if (data.failedStage === 'hidden') {
+                            setHiddenTestResult("Failed hidden testcase");
+                            setRunError(data.message || "Failed hidden testcase. Handle edge cases and try again.");
+                        } else {
+                            setRunError(data.message || "Visible testcases failed.");
+                        }
+                        setLastValidated(null);
+                        setIsSubmitting(false);
+                    };
+
                     if (Array.isArray(data.results)) {
-                        const results = {};
-                        data.results.forEach((r, i) => {
-                            const isErr = r.result === "Runtime Error" || r.result === "Error";
-                            results[i] = { ...r, status: isErr ? "error" : "success" };
-                        });
-                        setTestResults(results);
-                    }
-                    if (data.failedStage === 'hidden') {
-                        setHiddenTestResult("Failed hidden testcase");
-                        setRunError(data.message || "Failed hidden testcase. Handle edge cases and try again.");
+                        revealResultsSequentially(data.results, finalizeFailedSubmit);
                     } else {
-                        setRunError(data.message || "Visible testcases failed.");
+                        finalizeFailedSubmit();
                     }
-                    setLastValidated(null);
                     return;
                 }
 
@@ -412,17 +584,18 @@ const CrackTheCode = () => {
                     isFirst: data.isFirst,
                     message: data.message
                 });
+                setIsSubmitting(false);
             } else {
                 const errMsg = [data.message, data.error].filter(Boolean).join(": ") || `Submission failed (HTTP ${response.status})`;
                 if (!isAutoSubmit) setSubmitError(errMsg);
+                setIsSubmitting(false);
             }
         } catch (error) {
             console.error("Submission error:", error);
             if (!isAutoSubmit) setSubmitError(error?.message ? `Network Error: ${error.message}` : "Network error during submission.");
-        } finally {
             setIsSubmitting(false);
         }
-    }, [language, codeMap, sessionId]);
+    }, [language, codeMap, sessionId, clearRevealTimers, revealResultsSequentially]);
 
     // Keep the ref updated with the latest handleSubmit closure
     React.useEffect(() => {
@@ -457,6 +630,8 @@ const CrackTheCode = () => {
                     const savedDrafts = readStoredDrafts(teamId, sessionData.sessionId);
                     const mergedCode = { ...starter, ...savedDrafts };
                     latestCodeRef.current = { ...mergedCode };
+                    writeStoredStarter(teamId, sessionData.sessionId, starter);
+                    setStarterCodeMap(starter);
                     setTestCases(sessionData.question.testCases || []);
                     setCodeMap(mergedCode);
 
@@ -471,6 +646,16 @@ const CrackTheCode = () => {
                 }
                 if (sessionData.submission) {
                     setSubmissionResult(sessionData.submission);
+                } else {
+                    const prefersReducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches;
+                    if (!prefersReducedMotion) {
+                        clearIntroTimers();
+                        setIntroStage('showing');
+                        introTimersRef.current.push(
+                            setTimeout(() => setIntroStage('exiting'), 1250),
+                            setTimeout(() => setIntroStage('idle'), 1700)
+                        );
+                    }
                 }
             }
             setIsGameStarted(true);
@@ -568,7 +753,24 @@ const CrackTheCode = () => {
     const isVictim = glitchStatus?.active && glitchStatus?.ownerId !== teamId;
 
     return (
-        <div className="crack-page">
+        <div className={`crack-page ${introStage === 'exiting' ? 'is-entering' : ''}`}>
+            {introStage !== 'idle' && (
+                <div
+                    className={`arena-intro-overlay ${introStage === 'exiting' ? 'is-exiting' : ''}`}
+                    aria-hidden="true"
+                >
+                    <div className="arena-intro-card">
+                        <div className="arena-intro-logo">
+                            <GoatLogo />
+                        </div>
+                        <div className="arena-intro-eyebrow">ROUND 02 · LIVE</div>
+                        <div className="arena-intro-bar">
+                            <span className="arena-intro-bar-fill" />
+                        </div>
+                    </div>
+                </div>
+            )}
+
             {isDismissed && <DismissalOverlay />}
 
             {isVictim && !isDismissed && (
@@ -605,6 +807,7 @@ const CrackTheCode = () => {
                 <RightPanel
                     language={language}
                     code={codeMap[language] || ""}
+                    starterCode={starterCodeMap[language] ?? ""}
                     isRunning={isRunning}
                     isSubmitting={isSubmitting}
                     isSubmitEnabled={isSubmitEnabled}
@@ -615,6 +818,7 @@ const CrackTheCode = () => {
                     handleSubmit={handleSubmit}
                     handleCodeChange={handleCodeChange}
                     handleCodeImmediate={handleCodeImmediate}
+                    handleResetLanguage={handleResetLanguage}
                     handleEditorDidMount={handleEditorDidMount}
                     security={security}
                 />
@@ -730,7 +934,16 @@ const LeftPanel = React.memo(({
             <div className="lc-left-body">
                 {leftTab === 'testcase' && (
                     <div className="lc-prompt-hint">
-                        Deduce the hidden logic from the sample inputs and outputs, then implement <code>decodeLogic</code>.
+                        <span className="lc-prompt-icon" aria-hidden="true">
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <circle cx="12" cy="12" r="9" />
+                                <path d="M9.5 9.5a2.5 2.5 0 0 1 5 .8c0 1.7-2.5 2-2.5 3.7" />
+                                <circle cx="12" cy="17.5" r="0.6" fill="currentColor" />
+                            </svg>
+                        </span>
+                        <p className="lc-prompt-copy">
+                            Deduce the hidden logic from the sample inputs and outputs, then implement <code>decodeLogic</code>.
+                        </p>
                     </div>
                 )}
 
@@ -760,20 +973,26 @@ const LeftPanel = React.memo(({
                     </div>
                 )}
 
-                <div className="testcase-tabs">
+                <div className="testcase-tabs" role="tablist" aria-label="Visible testcases">
                     {testCases.map((_, index) => {
                         const result = testResults[index];
+                        const hasCaseResult = result?.isCorrect !== undefined;
+                        const statusClass = hasCaseResult
+                            ? (result.isCorrect ? 'is-pass' : 'is-fail')
+                            : '';
                         return (
                             <button
                                 key={index}
                                 type="button"
-                                className={`tab-btn ${activeTestCase === index ? 'active' : ''}`}
+                                role="tab"
+                                aria-selected={activeTestCase === index}
+                                className={`tab-btn ${activeTestCase === index ? 'active' : ''} ${statusClass}`}
                                 onClick={() => setActiveTestCase(index)}
                             >
-                                {isBusy ? (
-                                    <span className="lc-spinner sm" aria-label={`Running Case ${index + 1}`} />
+                                {hasCaseResult ? (
+                                    <CaseStatusIcon isCorrect={result.isCorrect} />
                                 ) : (
-                                    result?.isCorrect !== undefined && <CaseStatusIcon isCorrect={result.isCorrect} />
+                                    isBusy && <span className="lc-spinner sm" aria-label={`Running Case ${index + 1}`} />
                                 )}
                                 <span>Case {index + 1}</span>
                             </button>
@@ -782,7 +1001,7 @@ const LeftPanel = React.memo(({
                 </div>
 
                 {leftTab === 'testcase' ? (
-                    <div className="testcase-content">
+                    <div key={`tc-${activeTestCase}`} className="testcase-content">
                         <div className="io-group">
                             <span className="label">Input</span>
                             <pre className="io-box">{testCases[activeTestCase]?.input || ""}</pre>
@@ -793,7 +1012,7 @@ const LeftPanel = React.memo(({
                         </div>
                     </div>
                 ) : (
-                    <div className="testcase-content">
+                    <div key={`res-${activeTestCase}`} className="testcase-content">
                         {!isBusy && runError && (
                             <div className="io-group">
                                 <span className="label">Error Message</span>
@@ -801,7 +1020,7 @@ const LeftPanel = React.memo(({
                             </div>
                         )}
 
-                        {!isBusy && !runError && isCaseError && (
+                        {activeResult && !runError && isCaseError && (
                             <div className="io-group">
                                 <span className="label">Error Details</span>
                                 <pre className="lc-error-box">
@@ -815,14 +1034,14 @@ const LeftPanel = React.memo(({
                             <pre className="io-box">{testCases[activeTestCase]?.input || ""}</pre>
                         </div>
 
-                        {!isBusy && !isCaseError && activeResult?.log && (
+                        {activeResult && !isCaseError && activeResult?.log && (
                             <div className="io-group">
                                 <span className="label">Stdout</span>
                                 <pre className="io-box">{activeResult.log}</pre>
                             </div>
                         )}
 
-                        {!isBusy && !isCaseError && activeResult && (
+                        {activeResult && !isCaseError && (
                             <div className="io-group">
                                 <span className="label">Output</span>
                                 <pre className={`io-box ${activeResult.isCorrect ? 'output-pass' : 'output-fail'}`}>
@@ -842,15 +1061,218 @@ const LeftPanel = React.memo(({
     );
 });
 
+const LanguageDropdown = React.memo(({ value, onChange }) => {
+    const [isOpen, setIsOpen] = useState(false);
+    const [highlightedIndex, setHighlightedIndex] = useState(() =>
+        Math.max(0, LANGUAGE_OPTIONS.findIndex((opt) => opt.value === value))
+    );
+    const containerRef = React.useRef(null);
+    const triggerRef = React.useRef(null);
+
+    const selectedOption = LANGUAGE_OPTIONS.find((opt) => opt.value === value) || LANGUAGE_OPTIONS[0];
+
+    useEffect(() => {
+        if (!isOpen) return;
+        const handleOutside = (event) => {
+            if (containerRef.current && !containerRef.current.contains(event.target)) {
+                setIsOpen(false);
+            }
+        };
+        document.addEventListener('mousedown', handleOutside);
+        return () => document.removeEventListener('mousedown', handleOutside);
+    }, [isOpen]);
+
+    const toggleMenu = () => {
+        setIsOpen((prev) => {
+            const next = !prev;
+            if (next) {
+                const currentIdx = LANGUAGE_OPTIONS.findIndex((opt) => opt.value === value);
+                setHighlightedIndex(currentIdx >= 0 ? currentIdx : 0);
+            }
+            return next;
+        });
+    };
+
+    const selectOption = (nextValue) => {
+        onChange(nextValue);
+        setIsOpen(false);
+        triggerRef.current?.focus();
+    };
+
+    const handleKeyDown = (event) => {
+        if (!isOpen) {
+            if (event.key === 'ArrowDown' || event.key === 'ArrowUp' || event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault();
+                const currentIdx = LANGUAGE_OPTIONS.findIndex((opt) => opt.value === value);
+                setHighlightedIndex(currentIdx >= 0 ? currentIdx : 0);
+                setIsOpen(true);
+            }
+            return;
+        }
+
+        if (event.key === 'Escape') {
+            event.preventDefault();
+            setIsOpen(false);
+            triggerRef.current?.focus();
+        } else if (event.key === 'Tab') {
+            setIsOpen(false);
+        } else if (event.key === 'ArrowDown') {
+            event.preventDefault();
+            setHighlightedIndex((prev) => (prev + 1) % LANGUAGE_OPTIONS.length);
+        } else if (event.key === 'ArrowUp') {
+            event.preventDefault();
+            setHighlightedIndex((prev) => (prev - 1 + LANGUAGE_OPTIONS.length) % LANGUAGE_OPTIONS.length);
+        } else if (event.key === 'Enter' || event.key === ' ') {
+            event.preventDefault();
+            const picked = LANGUAGE_OPTIONS[highlightedIndex];
+            if (picked) selectOption(picked.value);
+        }
+    };
+
+    return (
+        <div
+            ref={containerRef}
+            className={`lang-selector ${isOpen ? 'is-open' : ''}`}
+            onKeyDown={handleKeyDown}
+        >
+            <button
+                ref={triggerRef}
+                type="button"
+                className="lang-trigger"
+                aria-haspopup="listbox"
+                aria-expanded={isOpen}
+                aria-label="Select programming language"
+                onClick={toggleMenu}
+            >
+                <svg className="lang-trigger-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                    <polyline points="16 18 22 12 16 6" />
+                    <polyline points="8 6 2 12 8 18" />
+                </svg>
+                <span className="lang-trigger-label">{selectedOption.label}</span>
+                <svg className="lang-trigger-chevron" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                    <polyline points="6 9 12 15 18 9" />
+                </svg>
+            </button>
+
+            {isOpen && (
+                <div className="lang-menu" role="listbox" aria-label="Programming languages">
+                    {LANGUAGE_OPTIONS.map((opt, index) => {
+                        const isSelected = opt.value === value;
+                        const isHighlighted = index === highlightedIndex;
+                        return (
+                            <button
+                                key={opt.value}
+                                type="button"
+                                role="option"
+                                aria-selected={isSelected}
+                                className={`lang-option ${isSelected ? 'is-selected' : ''} ${isHighlighted ? 'is-highlighted' : ''}`}
+                                onMouseEnter={() => setHighlightedIndex(index)}
+                                onClick={() => selectOption(opt.value)}
+                            >
+                                <span className="lang-option-main">
+                                    <span className="lang-option-dot" aria-hidden="true" />
+                                    <span className="lang-option-label">{opt.label}</span>
+                                </span>
+                                <span className="lang-option-meta">
+                                    <span className="lang-option-tag">{opt.tag}</span>
+                                    {isSelected && (
+                                        <svg className="lang-option-check" width="13" height="13" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                                            <path d="M3.5 8.5L6.5 11.5L12.5 4.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                                        </svg>
+                                    )}
+                                </span>
+                            </button>
+                        );
+                    })}
+                </div>
+            )}
+        </div>
+    );
+});
+
+const ResetConfirmModal = React.memo(({ languageLabel, otherLanguagesText, isClosing, onCancel, onConfirm }) => {
+    useEffect(() => {
+        const handleKeyDown = (event) => {
+            if (event.key === 'Escape') {
+                event.preventDefault();
+                onCancel();
+            }
+        };
+        document.addEventListener('keydown', handleKeyDown);
+        return () => document.removeEventListener('keydown', handleKeyDown);
+    }, [onCancel]);
+
+    return (
+        <div
+            className={`reset-modal-backdrop ${isClosing ? 'is-closing' : ''}`}
+            role="presentation"
+            onMouseDown={(e) => {
+                if (e.target === e.currentTarget) onCancel();
+            }}
+        >
+            <div
+                className={`reset-modal ${isClosing ? 'is-closing' : ''}`}
+                role="alertdialog"
+                aria-modal="true"
+                aria-labelledby="reset-modal-title"
+                aria-describedby="reset-modal-desc"
+            >
+                <div className="reset-modal-badge" aria-hidden="true">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.1" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M3 12a9 9 0 1 0 3-6.7L3 8" />
+                        <path d="M3 3v5h5" />
+                    </svg>
+                </div>
+
+                <h2 id="reset-modal-title" className="reset-modal-title">
+                    Reset {languageLabel} code?
+                </h2>
+
+                <p id="reset-modal-desc" className="reset-modal-desc">
+                    This will restore the default <strong>{languageLabel}</strong> boilerplate code and discard your current {languageLabel} changes. Your code in {otherLanguagesText} will remain untouched.
+                </p>
+
+                <div className="reset-modal-actions">
+                    <button
+                        type="button"
+                        className="reset-modal-btn cancel"
+                        autoFocus
+                        onClick={onCancel}
+                    >
+                        Keep Code
+                    </button>
+                    <button
+                        type="button"
+                        className="reset-modal-btn confirm"
+                        onClick={onConfirm}
+                    >
+                        Reset {languageLabel}
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+});
+
 const RightPanel = React.memo(({
-    language, code, isRunning, isSubmitting, isSubmitEnabled,
+    language, code, starterCode, isRunning, isSubmitting, isSubmitEnabled,
     submitError, clearSubmitError,
     handleLanguageChange, handleRun,
-    handleSubmit, handleCodeChange, handleCodeImmediate, handleEditorDidMount,
+    handleSubmit, handleCodeChange, handleCodeImmediate, handleResetLanguage, handleEditorDidMount,
     security
 }) => {
     // Local state for debounced editor updates
     const [localCode, setLocalCode] = useState(code);
+    const [resetModalOpen, setResetModalOpen] = useState(false);
+    const [resetModalClosing, setResetModalClosing] = useState(false);
+    const [isResetting, setIsResetting] = useState(false);
+    const modalTimerRef = React.useRef(null);
+    const resetAnimTimerRef = React.useRef(null);
+
+    useEffect(() => () => {
+        if (modalTimerRef.current) clearTimeout(modalTimerRef.current);
+        if (resetAnimTimerRef.current) clearTimeout(resetAnimTimerRef.current);
+    }, []);
 
     // Sync local code when language changes
     useEffect(() => {
@@ -874,28 +1296,76 @@ const RightPanel = React.memo(({
         return () => clearTimeout(timer);
     }, [localCode, handleCodeChange, code]);
 
+    const openResetModal = React.useCallback(() => {
+        if (modalTimerRef.current) clearTimeout(modalTimerRef.current);
+        setResetModalClosing(false);
+        setResetModalOpen(true);
+    }, []);
+
+    const closeResetModal = React.useCallback(() => {
+        if (!resetModalOpen || resetModalClosing) return;
+        setResetModalClosing(true);
+        if (modalTimerRef.current) clearTimeout(modalTimerRef.current);
+        modalTimerRef.current = setTimeout(() => {
+            setResetModalOpen(false);
+            setResetModalClosing(false);
+            modalTimerRef.current = null;
+        }, 180);
+    }, [resetModalOpen, resetModalClosing]);
+
+    const hasStarterCode = typeof starterCode === 'string' && starterCode.length > 0;
+
+    const confirmResetCode = React.useCallback(() => {
+        if (!hasStarterCode) {
+            closeResetModal();
+            return;
+        }
+        closeResetModal();
+        setLocalCode(starterCode);
+        handleResetLanguage(language, starterCode);
+
+        setIsResetting(false);
+        if (resetAnimTimerRef.current) clearTimeout(resetAnimTimerRef.current);
+        requestAnimationFrame(() => {
+            setIsResetting(true);
+            resetAnimTimerRef.current = setTimeout(() => {
+                setIsResetting(false);
+                resetAnimTimerRef.current = null;
+            }, 560);
+        });
+    }, [hasStarterCode, closeResetModal, starterCode, handleResetLanguage, language]);
+
+    const selectedLanguageOption = LANGUAGE_OPTIONS.find((opt) => opt.value === language) || LANGUAGE_OPTIONS[0];
+    const otherLanguageLabels = LANGUAGE_OPTIONS
+        .filter((opt) => opt.value !== language)
+        .map((opt) => opt.label);
+    const otherLanguagesText = otherLanguageLabels.length > 1
+        ? `${otherLanguageLabels.slice(0, -1).join(', ')}, and ${otherLanguageLabels[otherLanguageLabels.length - 1]}`
+        : (otherLanguageLabels[0] || 'other languages');
+
     return (
         <div className="panel right-panel">
             <div className="editor-header">
-                <div className="lang-selector">
-                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                        <polyline points="16 18 22 12 16 6" />
-                        <polyline points="8 6 2 12 8 18" />
-                    </svg>
-                    <select value={language} onChange={handleLanguageChange}>
-                        <option value="python">Python</option>
-                        <option value="cpp">C++</option>
-                        <option value="javascript">JavaScript</option>
-                        <option value="java">Java</option>
-                    </select>
-                </div>
+                <LanguageDropdown value={language} onChange={handleLanguageChange} />
                 <div className="actions">
-                    <span className="lc-saved-note">Saved locally</span>
+                    <button
+                        type="button"
+                        className={`btn reset-btn ${isResetting ? 'is-spinning' : ''}`}
+                        onClick={openResetModal}
+                        disabled={isRunning || isSubmitting || !hasStarterCode}
+                        title={`Restore default ${selectedLanguageOption.label} boilerplate code`}
+                    >
+                        <svg className="reset-btn-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                            <path d="M3 12a9 9 0 1 0 3-6.7L3 8" />
+                            <path d="M3 3v5h5" />
+                        </svg>
+                        <span>Reset</span>
+                    </button>
                     <button className="btn run-btn" onClick={handleRun} disabled={isRunning || isSubmitting}>
                         {isRunning ? (
                             <span className="lc-spinner sm" aria-hidden="true" />
                         ) : (
-                            <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                            <svg className="run-btn-icon" width="12" height="12" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
                                 <polygon points="5 3 19 12 5 21 5 3" />
                             </svg>
                         )}
@@ -910,7 +1380,7 @@ const RightPanel = React.memo(({
                         {isSubmitting ? (
                             <span className="lc-spinner sm" aria-hidden="true" />
                         ) : (
-                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                            <svg className="submit-btn-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                                 <path d="M22 2L11 13" />
                                 <path d="M22 2L15 22L11 13L2 9L22 2Z" />
                             </svg>
@@ -929,7 +1399,7 @@ const RightPanel = React.memo(({
                 </div>
             )}
 
-            <div className="monaco-wrapper" style={{ display: 'flex', flexDirection: 'column' }}>
+            <div className={`monaco-wrapper ${isResetting ? 'is-resetting' : ''}`} style={{ display: 'flex', flexDirection: 'column' }}>
                 <Editor
                     height="100%"
                     language={language === 'cpp' ? 'cpp' : language}
@@ -955,6 +1425,16 @@ const RightPanel = React.memo(({
                     }}
                 />
             </div>
+
+            {resetModalOpen && (
+                <ResetConfirmModal
+                    languageLabel={selectedLanguageOption.label}
+                    otherLanguagesText={otherLanguagesText}
+                    isClosing={resetModalClosing}
+                    onCancel={closeResetModal}
+                    onConfirm={confirmResetCode}
+                />
+            )}
         </div>
     );
 });
