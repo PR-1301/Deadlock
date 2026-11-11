@@ -1,18 +1,51 @@
 const path = require("path");
 const fs = require("fs");
-const { execFile } = require("child_process");
 const mongoose = require("mongoose");
+const { createCanvas, loadImage, GlobalFonts } = require("@napi-rs/canvas");
+const JSZip = require("jszip");
 const Team = require("../model/team.model");
 
 const CACHE_DIR = path.resolve(__dirname, "../cache/certificates");
-const TEMPLATE_PATH = path.resolve(__dirname, "../../frontend/public/LOC-Certificate.png");
-const PYTHON_SCRIPT = path.resolve(__dirname, "../scripts/generate_team_cert.py");
+
+// Register bundled font
+const FONT_PATH = path.resolve(__dirname, "../assets/fonts/pixelon.regular.ttf");
+if (fs.existsSync(FONT_PATH)) {
+    try {
+        GlobalFonts.registerFromPath(FONT_PATH, "Pixelon");
+    } catch (err) {
+        console.warn("[CERT] Failed to register Pixelon font:", err.message);
+    }
+}
+
+/**
+ * Locate the certificate template file across possible deployment structures
+ */
+function getTemplatePath() {
+    const candidatePaths = [
+        path.resolve(__dirname, "../assets/LOC-Certificate.png"),
+        path.resolve(__dirname, "../../frontend/public/LOC-Certificate.png"),
+        path.resolve(process.cwd(), "assets/LOC-Certificate.png"),
+        path.resolve(process.cwd(), "frontend/public/LOC-Certificate.png"),
+    ];
+
+    for (const p of candidatePaths) {
+        if (fs.existsSync(p)) return p;
+    }
+    throw new Error("LOC-Certificate.png template not found in assets or public directory");
+}
 
 /**
  * Escape regex special characters in a string
  */
 function escapeRegex(str) {
     return str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+/**
+ * Sanitize strings for safe filenames
+ */
+function sanitizeFilename(name) {
+    return String(name).replace(/[^\w\s\.-]/g, "_").trim();
 }
 
 /**
@@ -87,7 +120,7 @@ async function getMembersFromLOCDatabase(team) {
                 .filter(Boolean);
 
             if (names.length > 0) {
-                // If member names differ from Deadlock DB, update Deadlock DB non-destructively
+                // If member names differ from Deadlock DB, sync Deadlock DB non-destructively
                 if (JSON.stringify(team.members) !== JSON.stringify(names)) {
                     await Team.updateOne({ _id: team._id }, { $set: { members: names } }).catch(() => {});
                 }
@@ -108,6 +141,44 @@ async function getMembersFromLOCDatabase(team) {
 }
 
 /**
+ * Render a single certificate buffer using @napi-rs/canvas
+ */
+async function renderCertificateBuffer(templateImg, memberName) {
+    const canvas = createCanvas(templateImg.width, templateImg.height);
+    const ctx = canvas.getContext("2d");
+
+    // 1. Draw base template
+    ctx.drawImage(templateImg, 0, 0);
+
+    // 2. Clear placeholder "Participant Name _"
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(200, 680, 1600, 140);
+
+    // 3. Setup font
+    ctx.font = "80px Pixelon";
+    ctx.fillStyle = "#000000";
+
+    const metrics = ctx.measureText(memberName);
+    const textW = metrics.width;
+    const gap = 26;
+    const cursorW = 38;
+    const cursorH = 16;
+    const totalW = textW + gap + cursorW;
+
+    const x = (2000 - totalW) / 2.0;
+    const y = 776.0; // baseline
+
+    // 4. Draw member name
+    ctx.fillText(memberName, x, y);
+
+    // 5. Draw orange terminal cursor
+    ctx.fillStyle = "#FF7A50";
+    ctx.fillRect(x + textW + gap, 763.0, cursorW, cursorH);
+
+    return canvas.toBuffer("image/png");
+}
+
+/**
  * Generates certificates for a given teamId and returns the path to the ZIP archive.
  */
 async function generateTeamCertificates(teamId) {
@@ -120,17 +191,15 @@ async function generateTeamCertificates(teamId) {
         throw new Error("Team not found in Deadlock database");
     }
 
-    if (!fs.existsSync(TEMPLATE_PATH)) {
-        throw new Error(`Certificate template not found at: ${TEMPLATE_PATH}`);
-    }
+    const templatePath = getTemplatePath();
 
-    // 1. Fetch dynamic members from LOC database (with fallback to team.members)
+    // 1. Fetch dynamic members from LOC database (or fallback to team.members)
     const members = await getMembersFromLOCDatabase(team);
     if (!members || members.length === 0) {
         throw new Error(`No member names found for team '${team.name}'`);
     }
 
-    // 2. Ensure cache directory
+    // 2. Ensure cache directory exists
     if (!fs.existsSync(CACHE_DIR)) {
         fs.mkdirSync(CACHE_DIR, { recursive: true });
     }
@@ -141,43 +210,40 @@ async function generateTeamCertificates(teamId) {
     if (fs.existsSync(outputZip)) {
         const stats = fs.statSync(outputZip);
         const teamUpdated = new Date(team.updatedAt || 0).getTime();
-        // If file exists and is newer than last team update and non-empty, use cache
         if (stats.size > 1000 && stats.mtimeMs > teamUpdated) {
             return {
                 filePath: outputZip,
-                filename: `${team.name.replace(/\s+/g, "_")}_Certificates.zip`,
+                filename: `${sanitizeFilename(team.name)}_Certificates.zip`,
                 teamName: team.name,
                 members,
             };
         }
     }
 
-    // 4. Run python script to render certificates and package zip
-    await new Promise((resolve, reject) => {
-        const args = [
-            PYTHON_SCRIPT,
-            "--team-name",
-            team.name,
-            "--members",
-            JSON.stringify(members),
-            "--template",
-            TEMPLATE_PATH,
-            "--output-zip",
-            outputZip,
-        ];
+    // 4. Render certificates in pure Node.js and bundle with JSZip
+    const templateImg = await loadImage(templatePath);
+    const zip = new JSZip();
+    const cleanTeam = sanitizeFilename(team.name);
 
-        execFile("python3", args, (err, stdout, stderr) => {
-            if (err) {
-                console.error("[CERT] Python renderer failed:", stderr || err.message);
-                return reject(new Error("Failed to render team certificates"));
-            }
-            resolve(outputZip);
-        });
+    for (let i = 0; i < members.length; i++) {
+        const memberName = String(members[i]).trim();
+        const cleanMember = sanitizeFilename(memberName);
+        const certPngBuffer = await renderCertificateBuffer(templateImg, memberName);
+        const certFilename = `${cleanTeam} - Member ${i + 1} - ${cleanMember}.png`;
+        zip.file(certFilename, certPngBuffer);
+    }
+
+    const zipBuffer = await zip.generateAsync({
+        type: "nodebuffer",
+        compression: "DEFLATE",
+        compressionOptions: { level: 6 },
     });
+
+    fs.writeFileSync(outputZip, zipBuffer);
 
     return {
         filePath: outputZip,
-        filename: `${team.name.replace(/\s+/g, "_")}_Certificates.zip`,
+        filename: `${cleanTeam}_Certificates.zip`,
         teamName: team.name,
         members,
     };
@@ -187,4 +253,3 @@ module.exports = {
     generateTeamCertificates,
     getMembersFromLOCDatabase,
 };
-
