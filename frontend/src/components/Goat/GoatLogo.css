@@ -1,0 +1,202 @@
+/* GoatLogo.css - Clean Transparent PNG with Punchy, Sharp TLE Glitch Effect */
+
+.goat-logo-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
+    user-select: none;
+    position: relative;
+    z-index: 2;
+}
+
+.goat-logo-wrapper {
+    position: relative;
+    width: 100%;
+    max-width: clamp(280px, 32vw, 440px);
+    aspect-ratio: 913 / 311;
+    display: inline-block;
+}
+
+/* Base PNG Image - Pure, Sharp, Transparent Background */
+.goat-logo-base {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    position: relative;
+    z-index: 1;
+    filter: drop-shadow(0 4px 18px rgba(0, 0, 0, 0.6));
+    animation: goatBaseFlicker 6s infinite steps(1);
+}
+
+@keyframes goatBaseFlicker {
+    0%, 94%, 96%, 100% {
+        opacity: 1;
+        transform: translate(0, 0);
+    }
+    95% {
+        opacity: 0.95;
+        transform: translate(-3px, 1px);
+        filter: drop-shadow(2px 0 0 #36E3F0) drop-shadow(-2px 0 0 #F07A4E);
+    }
+}
+
+/* Glitch Slices: Sliced directly from the transparent PNG without any background */
+.goat-glitch-slice {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    pointer-events: none;
+    z-index: 2;
+    opacity: 0;
+}
+
+/* Upper Slice: Slices through "WHO'S THE" and top half of "GOAT" */
+.goat-slice-upper {
+    clip-path: polygon(0 15%, 100% 15%, 100% 48%, 0 48%);
+    animation: goatSlice1 3.2s infinite steps(1);
+}
+
+@keyframes goatSlice1 {
+    0%, 82% {
+        opacity: 0;
+        transform: translate(0, 0);
+    }
+    83% {
+        opacity: 1;
+        transform: translate(-14px, -1px);
+        filter: drop-shadow(3px 0 0 #36E3F0) drop-shadow(-2px 0 0 #F07A4E);
+    }
+    85% {
+        opacity: 1;
+        transform: translate(10px, 1px);
+        filter: drop-shadow(-3px 0 0 #36E3F0) drop-shadow(2px 0 0 #F07A4E);
+    }
+    87% {
+        opacity: 1;
+        transform: translate(-6px, 0);
+    }
+    89%, 100% {
+        opacity: 0;
+        transform: translate(0, 0);
+    }
+}
+
+/* Lower Slice: Slices through bottom half of "GOAT" and pixel goat legs */
+.goat-slice-lower {
+    clip-path: polygon(0 54%, 100% 54%, 100% 88%, 0 88%);
+    animation: goatSlice2 2.7s infinite steps(1);
+}
+
+@keyframes goatSlice2 {
+    0%, 75% {
+        opacity: 0;
+        transform: translate(0, 0);
+    }
+    76% {
+        opacity: 1;
+        transform: translate(14px, 1px);
+        filter: drop-shadow(-3px 0 0 #36E3F0) drop-shadow(3px 0 0 #F07A4E);
+    }
+    78% {
+        opacity: 1;
+        transform: translate(-10px, -1px);
+        filter: drop-shadow(3px 0 0 #36E3F0) drop-shadow(-2px 0 0 #F07A4E);
+    }
+    80% {
+        opacity: 1;
+        transform: translate(5px, 0);
+    }
+    82%, 100% {
+        opacity: 0;
+        transform: translate(0, 0);
+    }
+}
+
+/* Sharp Neon Glitch Cut Lines (TLE Signature Style) */
+.goat-laser-cyan {
+    position: absolute;
+    left: 4%;
+    width: 38%;
+    top: 36%;
+    height: 3px;
+    background: #36E3F0;
+    box-shadow: 0 0 12px #36E3F0, 0 0 4px #36E3F0;
+    pointer-events: none;
+    z-index: 3;
+    opacity: 0;
+    animation: goatLaserCyan 3.2s infinite steps(1);
+}
+
+@keyframes goatLaserCyan {
+    0%, 82% {
+        opacity: 0;
+        transform: scaleX(0);
+    }
+    83% {
+        opacity: 0.95;
+        transform: scaleX(1.1) translateX(-8px);
+    }
+    85% {
+        opacity: 1;
+        transform: scaleX(1.3) translateX(12px);
+    }
+    87% {
+        opacity: 0.7;
+        transform: scaleX(0.8) translateX(-4px);
+    }
+    89%, 100% {
+        opacity: 0;
+        transform: scaleX(0);
+    }
+}
+
+.goat-laser-orange {
+    position: absolute;
+    right: 12%;
+    width: 32%;
+    bottom: 25%;
+    height: 3px;
+    background: #F07A4E;
+    box-shadow: 0 0 12px #F07A4E, 0 0 4px #F07A4E;
+    pointer-events: none;
+    z-index: 3;
+    opacity: 0;
+    animation: goatLaserOrange 2.7s infinite steps(1);
+}
+
+@keyframes goatLaserOrange {
+    0%, 75% {
+        opacity: 0;
+        transform: scaleX(0);
+    }
+    76% {
+        opacity: 0.95;
+        transform: scaleX(1.2) translateX(8px);
+    }
+    78% {
+        opacity: 1;
+        transform: scaleX(1.4) translateX(-12px);
+    }
+    80% {
+        opacity: 0.6;
+        transform: scaleX(0.9) translateX(4px);
+    }
+    82%, 100% {
+        opacity: 0;
+        transform: scaleX(0);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .goat-logo-base,
+    .goat-glitch-slice,
+    .goat-laser-cyan,
+    .goat-laser-orange {
+        animation: none;
+    }
+}
