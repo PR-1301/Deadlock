@@ -8,7 +8,8 @@ const AdminSecurity = () => {
     const [settings, setSettings] = useState({
         disableCopyPaste: false,
         disableTextSelection: false,
-        allowDevTools: true
+        allowDevTools: true,
+        forceFullscreen: false
     });
 
     useEffect(() => {
@@ -16,8 +17,12 @@ const AdminSecurity = () => {
         const fetchSettings = async () => {
             try {
                 const res = await getSecuritySettings();
-                if (res.success) {
-                    setSettings(res.settings);
+                if (res.success && res.settings) {
+                    setSettings((prev) => ({
+                        ...prev,
+                        ...res.settings,
+                        forceFullscreen: Boolean(res.settings.forceFullscreen)
+                    }));
                 }
             } catch (err) {
                 console.error(">>> [ADMIN_SECURITY] Failed to fetch settings", err);
@@ -63,8 +68,23 @@ const AdminSecurity = () => {
                             <label className="cyber-switch">
                                 <input
                                     type="checkbox"
-                                    checked={settings.disableCopyPaste}
+                                    checked={Boolean(settings.disableCopyPaste)}
                                     onChange={() => handleToggle('disableCopyPaste')}
+                                />
+                                <span className="slider"></span>
+                            </label>
+                        </div>
+
+                        <div className="toggle-item">
+                            <div className="toggle-info">
+                                <span className="toggle-label">TURN FULL SCREEN</span>
+                                <span className="toggle-desc">Forces all active player screens into fullscreen mode</span>
+                            </div>
+                            <label className="cyber-switch">
+                                <input
+                                    type="checkbox"
+                                    checked={Boolean(settings.forceFullscreen)}
+                                    onChange={() => handleToggle('forceFullscreen')}
                                 />
                                 <span className="slider"></span>
                             </label>

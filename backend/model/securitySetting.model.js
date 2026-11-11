@@ -13,6 +13,10 @@ const SecuritySettingSchema = new mongoose.Schema({
     allowDevTools: {
         type: Boolean,
         default: false
+    },
+    forceFullscreen: {
+        type: Boolean,
+        default: false
     }
 }, { timestamps: true });
 

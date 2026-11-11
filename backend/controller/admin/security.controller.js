@@ -14,14 +14,15 @@ exports.getSecuritySettings = async (req, res) => {
 
 exports.updateSecuritySettings = async (req, res) => {
     try {
-        const { disableCopyPaste, disableTextSelection, allowDevTools } = req.body;
+        const { disableCopyPaste, disableTextSelection, allowDevTools, forceFullscreen } = req.body;
 
         let settings = await SecuritySetting.findOneAndUpdate(
             { key: "global_security" },
             {
-                disableCopyPaste,
-                disableTextSelection,
-                allowDevTools
+                disableCopyPaste: Boolean(disableCopyPaste),
+                disableTextSelection: Boolean(disableTextSelection),
+                allowDevTools: Boolean(allowDevTools),
+                forceFullscreen: Boolean(forceFullscreen)
             },
             { new: true, upsert: true }
         );
