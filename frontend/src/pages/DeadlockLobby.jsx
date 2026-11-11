@@ -70,13 +70,19 @@ const DeadlockLobby = ({ onMatchFound }) => {
     const [matchInfo, setMatchInfo] = useState(null);
 
     const storedMembers = localStorage.getItem('teamMembers');
+    const apiMembers = teamStatus?.members;
     const members = useMemo(() => {
+        if (Array.isArray(apiMembers) && apiMembers.length > 0) {
+            return apiMembers;
+        }
         try {
             return storedMembers ? JSON.parse(storedMembers) : [];
         } catch {
             return [];
         }
-    }, [storedMembers]);
+    }, [apiMembers, storedMembers]);
+
+    const displayTeamName = teamStatus?.name || teamName;
 
     useEffect(() => {
         document.title = "LOBBY // TUG OF AURA // Celestius";
@@ -93,6 +99,13 @@ const DeadlockLobby = ({ onMatchFound }) => {
                 if (teamRes.ok) {
                     const data = await teamRes.json();
                     setTeamStatus(data);
+
+                    if (Array.isArray(data.members) && data.members.length > 0) {
+                        localStorage.setItem('teamMembers', JSON.stringify(data.members));
+                    }
+                    if (data.name) {
+                        localStorage.setItem('teamName', data.name);
+                    }
 
                     if (data.currentRound === 'crack-the-code' || data.currentRound === 'eliminated') {
                         navigate('/crackTheCode');
@@ -167,8 +180,12 @@ const DeadlockLobby = ({ onMatchFound }) => {
                     <img src={celestiusLogo} alt="Celestius" className="celestius-nav-logo" />
                 </div>
                 <div className="navbar-center-tag">
-                    <span className="live-pulse-dot" />
-                    <span className="navbar-tag-text">ROUND 01 // TUG OF AURA</span>
+                    <span className="navbar-round-chip">
+                        <span>ROUND 01</span>
+                    </span>
+                    <span className="navbar-round-sep" aria-hidden="true">//</span>
+                    <span className="navbar-tag-text">TUG OF AURA</span>
+                    <span className="live-pulse-dot" aria-hidden="true" />
                 </div>
                 <div className="navbar-brand-right">
                     <img src={larperOrCoderImg} alt="LARPER OR CODER" className="larper-coder-nav-logo" />
@@ -192,11 +209,21 @@ const DeadlockLobby = ({ onMatchFound }) => {
                 <section className="duo-versus-stage">
                     {/* Your Duo Card */}
                     <div className="duo-card player-duo">
+                        <span className="duo-corner tl" aria-hidden="true" />
+                        <span className="duo-corner tr" aria-hidden="true" />
+                        <span className="duo-corner bl" aria-hidden="true" />
+                        <span className="duo-corner br" aria-hidden="true" />
+
                         <div className="duo-card-header">
-                            <span className="duo-tag">YOUR DUO</span>
+                            <span className="duo-tag-parallelogram">
+                                <span>YOUR DUO</span>
+                            </span>
                             <span className="duo-aura-indicator">AURA 100%</span>
                         </div>
-                        <h2 className="duo-team-name">{teamName}</h2>
+                        <h2 className="duo-team-name">
+                            <span className="duo-team-name-text">{displayTeamName}</span>
+                            <span className="duo-team-underscore" aria-hidden="true" />
+                        </h2>
                         <div className="duo-members-list">
                             <div className="homie-chip">
                                 <span className="homie-idx">01</span>
@@ -209,7 +236,7 @@ const DeadlockLobby = ({ onMatchFound }) => {
                         </div>
                         <div className="duo-card-footer">
                             <span className="duo-status-dot ready" />
-                            <span className="duo-status-text">LOCKED IN & READY</span>
+                            <span className="duo-status-text">LOCKED IN &amp; READY</span>
                         </div>
                     </div>
 
@@ -223,26 +250,36 @@ const DeadlockLobby = ({ onMatchFound }) => {
 
                     {/* Opponent Duo Card */}
                     <div className={`duo-card opponent-duo ${isMatchFound ? 'matched' : 'searching'}`}>
+                        <span className="duo-corner tl opfor" aria-hidden="true" />
+                        <span className="duo-corner tr opfor" aria-hidden="true" />
+                        <span className="duo-corner bl opfor" aria-hidden="true" />
+                        <span className="duo-corner br opfor" aria-hidden="true" />
+
                         <div className="duo-card-header">
-                            <span className="duo-tag opfor">OPFOR DUO</span>
+                            <span className="duo-tag-parallelogram opfor">
+                                <span>OPFOR DUO</span>
+                            </span>
                             <span className="duo-aura-indicator opfor">
                                 {isMatchFound ? 'AURA 100%' : 'SCANNING...'}
                             </span>
                         </div>
                         <h2 className="duo-team-name opfor">
-                            {isMatchFound ? matchInfo.opponentName : '[ SEARCHING CHALLENGER ]'}
+                            <span className="duo-team-name-text">
+                                {isMatchFound ? matchInfo.opponentName : '[ SEARCHING CHALLENGER ]'}
+                            </span>
+                            <span className="duo-team-underscore opfor" aria-hidden="true" />
                         </h2>
                         <div className="duo-members-list">
                             <div className="homie-chip opfor">
                                 <span className="homie-idx">01</span>
                                 <span className="homie-name">
-                                    {isMatchFound ? 'Opponent 1' : 'Awaiting Match...'}
+                                    {isMatchFound ? (matchInfo?.opponentMembers?.[0] || 'Opponent 1') : 'Awaiting Match...'}
                                 </span>
                             </div>
                             <div className="homie-chip opfor">
                                 <span className="homie-idx">02</span>
                                 <span className="homie-name">
-                                    {isMatchFound ? 'Opponent 2' : 'Awaiting Match...'}
+                                    {isMatchFound ? (matchInfo?.opponentMembers?.[1] || 'Opponent 2') : 'Awaiting Match...'}
                                 </span>
                             </div>
                         </div>

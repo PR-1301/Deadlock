@@ -53,34 +53,65 @@
 }
 
 .navbar-center-tag {
-    display: flex;
+    position: relative;
+    display: inline-flex;
     align-items: center;
-    gap: 8px;
-    background: rgba(20, 20, 26, 0.8);
-    border: 1px solid rgba(246, 236, 214, 0.14);
-    padding: 6px 16px;
-    border-radius: 9999px;
+    gap: 10px;
+    background: linear-gradient(180deg, #12131b 0%, #090a0f 100%);
+    border: 1.5px solid #f27042;
+    border-radius: 3px;
+    padding: 5px 14px 5px 8px;
+    box-shadow:
+        inset 0 0 0 1px rgba(245, 165, 36, 0.24),
+        3px 3px 0 #4a1c10,
+        0 8px 24px rgba(0, 0, 0, 0.65);
+}
+
+.navbar-round-chip {
+    display: inline-flex;
+    align-items: center;
+    padding: 3px 10px;
+    background: #faf1dc;
+    color: #16110e;
+    border: 1.5px solid #f5a524;
+    box-shadow: 2px 2px 0 #b8680a;
+    transform: skewX(-16deg);
+    font-size: 0.72rem;
+    font-weight: 900;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+}
+
+.navbar-round-chip > * {
+    transform: skewX(16deg);
+}
+
+.navbar-round-sep {
+    font-size: 0.8rem;
+    font-weight: 800;
+    color: #f5a524;
+    letter-spacing: 0.05em;
 }
 
 .live-pulse-dot {
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
+    width: 7px;
+    height: 7px;
+    border-radius: 1px;
     background: #3DDC84;
-    box-shadow: 0 0 10px #3DDC84;
+    box-shadow: 0 0 8px #3DDC84;
     animation: livePulse 1.4s infinite ease-in-out;
 }
 
 @keyframes livePulse {
     0%, 100% { transform: scale(1); opacity: 0.8; }
-    50% { transform: scale(1.4); opacity: 1; box-shadow: 0 0 16px #3DDC84; }
+    50% { transform: scale(1.25); opacity: 1; box-shadow: 0 0 14px #3DDC84; }
 }
 
 .navbar-tag-text {
-    font-size: 0.8125rem;
-    font-weight: 700;
-    letter-spacing: 0.12em;
-    color: #F6ECD6;
+    font-size: 0.78rem;
+    font-weight: 800;
+    letter-spacing: 0.14em;
+    color: #faf1dc;
     text-transform: uppercase;
 }
 
@@ -179,17 +210,15 @@
 }
 
 .duo-card {
-    background: rgba(18, 18, 24, 0.75);
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
-    border: 1px solid rgba(246, 236, 214, 0.12);
-    border-radius: 12px;
-    padding: 1.75rem;
+    position: relative;
+    background: linear-gradient(180deg, #12131b 0%, #090a0f 100%);
+    border: 2px solid #f27042;
+    border-radius: 4px;
+    padding: 1.65rem 1.7rem 1.45rem;
     display: flex;
     flex-direction: column;
-    gap: 1.25rem;
-    box-shadow: 0 12px 35px rgba(0, 0, 0, 0.6);
-    transition: transform 0.25s ease, border-color 0.25s ease;
+    gap: 1.2rem;
+    transition: transform 0.2s cubic-bezier(0.22, 1.18, 0.36, 1), box-shadow 0.2s ease, border-color 0.2s ease;
 }
 
 .duo-card:hover {
@@ -197,64 +226,132 @@
 }
 
 .duo-card.player-duo {
-    border-top: 3px solid #F07A4E;
+    border-color: #f27042;
+    box-shadow:
+        inset 0 0 0 3px #090a0f,
+        inset 0 0 0 4px rgba(245, 165, 36, 0.32),
+        6px 6px 0 #4a1c10,
+        0 20px 50px rgba(0, 0, 0, 0.78);
 }
 
 .duo-card.opponent-duo {
-    border-top: 3px solid #36E3F0;
+    border-color: #36E3F0;
+    box-shadow:
+        inset 0 0 0 3px #090a0f,
+        inset 0 0 0 4px rgba(54, 227, 240, 0.25),
+        6px 6px 0 #0d3a44,
+        0 20px 50px rgba(0, 0, 0, 0.78);
 }
 
 .duo-card.opponent-duo.searching {
-    border-top: 3px dashed rgba(54, 227, 240, 0.6);
+    border-style: dashed;
 }
+
+.duo-corner {
+    position: absolute;
+    width: 11px;
+    height: 11px;
+    border-color: #f5a524;
+    border-style: solid;
+    pointer-events: none;
+}
+
+.duo-corner.opfor {
+    border-color: #36E3F0;
+}
+
+.duo-corner.tl { top: -6px; left: -6px; border-width: 2px 0 0 2px; }
+.duo-corner.tr { top: -6px; right: -6px; border-width: 2px 2px 0 0; }
+.duo-corner.bl { bottom: -6px; left: -6px; border-width: 0 0 2px 2px; }
+.duo-corner.br { bottom: -6px; right: -6px; border-width: 0 2px 2px 0; }
 
 .duo-card-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
+    gap: 12px;
 }
 
-.duo-tag {
-    font-size: 0.75rem;
+.duo-tag-parallelogram {
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 13px;
+    background: #faf1dc;
+    color: #16110e;
+    border: 2px solid #f5a524;
+    box-shadow: 3px 3px 0 #b8680a;
+    transform: skewX(-16deg);
+    font-size: 0.7rem;
     font-weight: 800;
     letter-spacing: 0.14em;
-    color: #F07A4E;
     text-transform: uppercase;
 }
 
-.duo-tag.opfor {
+.duo-tag-parallelogram > * {
+    transform: skewX(16deg);
+}
+
+.duo-tag-parallelogram.opfor {
+    background: #0d161d;
     color: #36E3F0;
+    border-color: #36E3F0;
+    box-shadow: 3px 3px 0 #0d4b57;
 }
 
 .duo-aura-indicator {
-    font-size: 0.75rem;
-    font-weight: 700;
-    letter-spacing: 0.08em;
-    background: rgba(240, 122, 78, 0.12);
-    color: #F07A4E;
-    padding: 3px 8px;
-    border-radius: 4px;
+    font-size: 0.7rem;
+    font-weight: 800;
+    letter-spacing: 0.1em;
+    background: rgba(242, 112, 66, 0.1);
+    border: 1.5px solid rgba(245, 165, 36, 0.4);
+    color: #f5a524;
+    padding: 4px 10px;
+    border-radius: 3px;
 }
 
 .duo-aura-indicator.opfor {
-    background: rgba(54, 227, 240, 0.12);
+    background: rgba(54, 227, 240, 0.08);
+    border-color: rgba(54, 227, 240, 0.35);
     color: #36E3F0;
 }
 
 .duo-team-name {
     margin: 0;
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+    min-width: 0;
     font-family: 'JetBrains Mono', 'Fira Code', monospace;
     font-size: clamp(1.25rem, 2.2vw, 1.65rem);
     font-weight: 800;
-    color: #F6ECD6;
+    color: #faf1dc;
     letter-spacing: 0.06em;
+    text-shadow: 2px 2px 0 #26120c;
+}
+
+.duo-team-name-text {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
 }
 
 .duo-team-name.opfor {
-    color: #D4D2CD;
+    color: #e4e9ec;
+    text-shadow: 2px 2px 0 #0b242b;
+}
+
+.duo-team-underscore {
+    flex-shrink: 0;
+    width: 12px;
+    height: 3.5px;
+    background: #f5a524;
+    box-shadow: 0 0 8px rgba(245, 165, 36, 0.7);
+}
+
+.duo-team-underscore.opfor {
+    background: #36E3F0;
+    box-shadow: 0 0 8px rgba(54, 227, 240, 0.65);
+    animation: scanningCursorBlink 1s steps(1) infinite;
 }
 
 .duo-members-list {
@@ -268,46 +365,54 @@
     min-width: 120px;
     display: flex;
     align-items: center;
-    gap: 8px;
-    background: rgba(26, 26, 34, 0.7);
-    border: 1px solid rgba(246, 236, 214, 0.1);
-    border-radius: 6px;
-    padding: 8px 12px;
+    gap: 10px;
+    background: rgba(8, 9, 13, 0.85);
+    border: 1.5px solid rgba(242, 112, 66, 0.35);
+    box-shadow: inset 0 1px 0 rgba(250, 241, 220, 0.05);
+    border-radius: 3px;
+    padding: 8px 10px;
+}
+
+.homie-chip.opfor {
+    border-color: rgba(54, 227, 240, 0.28);
 }
 
 .homie-idx {
-    font-size: 0.75rem;
+    font-size: 0.7rem;
     font-weight: 800;
-    color: #F07A4E;
-    background: rgba(240, 122, 78, 0.15);
+    color: #110b08;
+    background: #f27042;
+    border: 1px solid #f5a524;
     padding: 2px 6px;
-    border-radius: 3px;
+    border-radius: 2px;
+    flex-shrink: 0;
 }
 
 .homie-chip.opfor .homie-idx {
-    color: #36E3F0;
-    background: rgba(54, 227, 240, 0.15);
+    color: #071317;
+    background: #36E3F0;
+    border-color: #9bf6ff;
 }
 
 .homie-name {
-    font-size: 0.875rem;
-    font-weight: 600;
-    color: #F6ECD6;
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: #faf1dc;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
 }
 
 .homie-chip.opfor .homie-name {
-    color: #A59E92;
+    color: #b4c2c7;
 }
 
 .duo-card-footer {
     display: flex;
     align-items: center;
     gap: 8px;
-    padding-top: 10px;
-    border-top: 1px solid rgba(246, 236, 214, 0.08);
+    padding-top: 11px;
+    border-top: 1px dashed rgba(250, 241, 220, 0.14);
 }
 
 .duo-status-dot {

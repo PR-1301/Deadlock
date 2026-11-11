@@ -10,6 +10,7 @@ import ScannerLoader from "../components/Loader/ScannerLoader.jsx";
 import "../style/login.css";
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL || "";
+const GENZ_IDLE_PROMPTS = ["Who's cooking fr...", "Waiting on twin..."];
 
 // Debounce helper
 const useDebounce = (value, delay) => {
@@ -28,7 +29,7 @@ const Deadlock = () => {
 
   const [members, setMembers] = useState(["", ""]);
   const [teamExists, setTeamExists] = useState(false);
-  const [isTeamAvailable, setIsTeamAvailable] = useState(false);
+  const [teamNotFound, setTeamNotFound] = useState(false);
   const [existingTeamData, setExistingTeamData] = useState(null);
 
   // Loading / Intro state
@@ -39,7 +40,6 @@ const Deadlock = () => {
   const [redirectTarget, setRedirectTarget] = useState("/deadlock/lobby");
 
   // Deployment State
-  const [isDeploying, setIsDeploying] = useState(false);
   const [isResuming, setIsResuming] = useState(false);
 
   // Notification State
@@ -49,37 +49,49 @@ const Deadlock = () => {
     document.title = "LARPER OR CODER // Celestius";
   }, []);
 
-  // Check Team Existence
+  // Check Team Existence & Autofill Members
   useEffect(() => {
+    let cancelled = false;
     const checkTeam = async () => {
-      if (!debouncedTeamName || debouncedTeamName.length < 1) {
+      const trimmed = debouncedTeamName.trim();
+      if (!trimmed) {
         setTeamExists(false);
-        setIsTeamAvailable(false);
+        setTeamNotFound(false);
         setExistingTeamData(null);
+        setMembers(["", ""]);
         return;
       }
 
       try {
-        const response = await axios.get(`${BASE_URL}/api/admin/deadlock/team/check/${debouncedTeamName}`);
+        const response = await axios.get(`${BASE_URL}/api/admin/deadlock/team/check/${encodeURIComponent(trimmed)}`);
+        if (cancelled) return;
 
         if (response.data.success) {
-          if (response.data.exists) {
+          if (response.data.exists && response.data.team) {
+            const team = response.data.team;
+            const fetchedMembers = Array.isArray(team.members) ? team.members : [];
             setTeamExists(true);
-            setIsTeamAvailable(false);
-            setExistingTeamData(response.data.team);
-            showNotification("TEAM RECORD FOUND. RESUMING SESSION.", "success");
+            setTeamNotFound(false);
+            setExistingTeamData(team);
+            setMembers([fetchedMembers[0] || "", fetchedMembers[1] || ""]);
           } else {
             setTeamExists(false);
-            setIsTeamAvailable(true);
+            setTeamNotFound(true);
             setExistingTeamData(null);
+            setMembers(["", ""]);
           }
         }
       } catch (error) {
-        console.error("Check team error:", error);
+        if (!cancelled) {
+          console.error("Check team error:", error);
+        }
       }
     };
 
     checkTeam();
+    return () => {
+      cancelled = true;
+    };
   }, [debouncedTeamName]);
 
   const showNotification = (message, type = "error") => {
@@ -87,10 +99,15 @@ const Deadlock = () => {
     setTimeout(() => setNotification(null), 3000);
   };
 
-  const handleMemberChange = (index, value) => {
-    const updated = [...members];
-    updated[index] = value;
-    setMembers(updated);
+  const handleTeamNameChange = (e) => {
+    const nextValue = e.target.value;
+    setTeamName(nextValue);
+    if (teamExists || teamNotFound) {
+      setTeamExists(false);
+      setTeamNotFound(false);
+      setExistingTeamData(null);
+      setMembers(["", ""]);
+    }
   };
 
   const initRedirect = (targetPath = "/deadlock/lobby") => {
@@ -98,66 +115,31 @@ const Deadlock = () => {
     setIsRedirecting(true);
   };
 
-  const handleSubmit = async () => {
-    if (isDeploying || isResuming) return;
+  const handleSubmit = async (e) => {
+    if (e) e.preventDefault();
+    if (isResuming) return;
 
-    // RESUME MISSION FLOW
-    if (teamExists && existingTeamData) {
-      setIsResuming(true);
-      showNotification(`WELCOME BACK, ${existingTeamData.name}`, "success");
-      localStorage.setItem("teamId", existingTeamData._id);
-      localStorage.setItem("teamName", existingTeamData.name);
-      if (existingTeamData.members) {
-        localStorage.setItem("teamMembers", JSON.stringify(existingTeamData.members));
-      }
-
-      let targetPath = "/deadlock/lobby";
-      if (existingTeamData.currentRound === 'crack-the-code' || existingTeamData.currentRound === 'eliminated') {
-        targetPath = "/crackTheCode";
-      } else if (existingTeamData.currentRound === 'deadlock') {
-        targetPath = "/deadlock/lobby";
-      }
-
-      setTimeout(() => initRedirect(targetPath), 1000);
+    if (!teamExists || !existingTeamData) {
+      showNotification("ENTER A REGISTERED TEAM NAME.", "error");
       return;
     }
 
-    // CREATE TEAM FLOW
-    if (!teamName || members.some(m => !m)) {
-      showNotification("MISSING CREDENTIALS. FILL ALL FIELDS.", "error");
-      return;
+    setIsResuming(true);
+    showNotification(`WELCOME, ${existingTeamData.name}`, "success");
+    localStorage.setItem("teamId", existingTeamData._id);
+    localStorage.setItem("teamName", existingTeamData.name);
+    if (Array.isArray(existingTeamData.members)) {
+      localStorage.setItem("teamMembers", JSON.stringify(existingTeamData.members));
     }
 
-    setIsDeploying(true);
-
-    const teamData = {
-      name: teamName,
-      members: members
-    };
-
-    try {
-      const response = await axios.post(`${BASE_URL}/api/admin/deadlock/team`, teamData);
-
-      if (response.data.success) {
-        showNotification("DEPLOYMENT SUCCESSFUL.", "success");
-        localStorage.setItem("teamId", response.data.team._id);
-        localStorage.setItem("teamName", response.data.team.name);
-        if (response.data.team.members) {
-          localStorage.setItem("teamMembers", JSON.stringify(response.data.team.members));
-        }
-        setTimeout(initRedirect, 1000);
-      }
-    } catch (error) {
-      console.error("Error deploying team:", error);
-      setIsDeploying(false);
-      if (error.response) {
-        showNotification(error.response.data.message || "DEPLOYMENT FAILED", "error");
-      } else if (error.request) {
-        showNotification("CONNECTION FAILURE. CHECK SERVER.", "error");
-      } else {
-        showNotification("SYSTEM ERROR. ABORTING.", "error");
-      }
+    let targetPath = "/deadlock/lobby";
+    if (existingTeamData.currentRound === 'crack-the-code' || existingTeamData.currentRound === 'eliminated') {
+      targetPath = "/crackTheCode";
+    } else if (existingTeamData.currentRound === 'deadlock') {
+      targetPath = "/deadlock/lobby";
     }
+
+    setTimeout(() => initRedirect(targetPath), 1000);
   };
 
   return (
@@ -197,51 +179,66 @@ const Deadlock = () => {
 
         {/* Main Content */}
         <main className="login-content">
-          {/* Round 1 TLE Glitch Title Banner */}
-          <TleLogo />
+          {/* TLE Glitch Title Banner (no round badge since this also resumes Round 2) */}
+          <TleLogo showBadge={false} />
 
-          {/* Team Name Input */}
-          <div className="cyber-input-group">
-            <input
-              type="text"
-              className="team-input"
-              value={teamName}
-              onChange={(e) => setTeamName(e.target.value)}
-              required
-              placeholder="Drop the Duo's name..."
-              autoComplete="off"
-            />
-            {teamExists && <div className="team-status-indicator">TEAM RECORD IDENTIFIED // RESUME READY</div>}
-            {isTeamAvailable && <div className="team-status-indicator available">TEAM IDENTIFIER AVAILABLE</div>}
-          </div>
-
-          {/* Conditionally Render Operatives */}
-          <div className={`operatives-section ${teamExists ? "hidden" : "visible"}`}>
-            <div className="section-label">// THE LOCKED-IN DUO</div>
-            <div className="operatives-grid">
-              {members.map((member, index) => (
-                <div className="operative-card" key={index}>
-                  <span className="op-number">0{index + 1}</span>
-                  <input
-                    type="text"
-                    className="operative-input"
-                    value={member}
-                    placeholder={`Homie ${index + 1}`}
-                    onChange={(e) => handleMemberChange(index, e.target.value)}
-                  />
+          <form className="login-form" onSubmit={handleSubmit}>
+            {/* Team Name Input */}
+            <div className="cyber-input-group">
+              <div className={`team-input-frame ${teamExists ? "is-found" : teamNotFound ? "is-missing" : ""}`}>
+                <span className="input-corner tl" aria-hidden="true" />
+                <span className="input-corner tr" aria-hidden="true" />
+                <span className="input-corner bl" aria-hidden="true" />
+                <span className="input-corner br" aria-hidden="true" />
+                <input
+                  type="text"
+                  className="team-input"
+                  value={teamName}
+                  onChange={handleTeamNameChange}
+                  required
+                  placeholder="Drop the Duo's name..."
+                  autoComplete="off"
+                />
+              </div>
+              {teamExists && (
+                <div key="status-found" className="team-status-indicator">
+                  TEAM RECORD IDENTIFIED // DUO AUTOFILLED
                 </div>
-              ))}
+              )}
+              {teamNotFound && (
+                <div key="status-missing" className="team-status-indicator missing">
+                  TEAM RECORD NOT FOUND // CHECK TEAM NAME
+                </div>
+              )}
             </div>
-          </div>
 
-          {/* Action Button */}
-          <button
-            className={`deploy-btn ${teamExists ? "resume-mode" : ""} ${(isDeploying || isResuming) ? "deploying" : ""}`}
-            onClick={handleSubmit}
-            disabled={isDeploying || isResuming}
-          >
-            {teamExists ? (isResuming ? "RESUMING..." : "RESUME MISSION") : (isDeploying ? "LOCKING IN..." : "LOCK IN")}
-          </button>
+            {/* Read-only Autofilled Operatives */}
+            <div className="operatives-section visible">
+              <div className="section-label">// THE LOCKED-IN DUO</div>
+              <div className="operatives-grid">
+                {members.map((member, index) => (
+                  <div
+                    className={`operative-card ${member ? "is-filled" : ""}`}
+                    key={`${index}-${member || "idle"}`}
+                  >
+                    <span className="op-number">0{index + 1}</span>
+                    <span className={`operative-value ${member ? "is-filled" : ""}`}>
+                      {member || GENZ_IDLE_PROMPTS[index] || "Who's pulling up..."}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Action Button */}
+            <button
+              type="submit"
+              className={`deploy-btn ${teamExists ? "is-ready" : ""} ${isResuming ? "deploying" : ""}`}
+              disabled={!teamExists || isResuming}
+            >
+              {isResuming ? "LOCKING IN..." : "LOCK IN"}
+            </button>
+          </form>
         </main>
       </div>
     </>
