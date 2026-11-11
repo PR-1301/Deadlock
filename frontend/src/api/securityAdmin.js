@@ -31,4 +31,39 @@ export const updateSecuritySettings = async (settings) => {
     }
 };
 
+export const getSecurityLogs = async (params = {}) => {
+    try {
+        const response = await api.get('/security-logs', { params });
+        return response.data;
+    } catch (error) {
+        console.error("Error fetching security logs:", error);
+        throw error;
+    }
+};
+
+export const clearSecurityLogs = async () => {
+    try {
+        const response = await api.delete('/security-logs');
+        return response.data;
+    } catch (error) {
+        console.error("Error clearing security logs:", error);
+        throw error;
+    }
+};
+
+export const postSecurityLog = async (payload) => {
+    const response = await fetch(`${API_URL}/security-logs`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
+        keepalive: true,
+    });
+    if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+    }
+    return response.json();
+};
+
 export default api;

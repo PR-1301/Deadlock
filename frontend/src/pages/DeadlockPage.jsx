@@ -288,6 +288,7 @@ const DeadlockPage = () => {
                         setLanguage={setLanguage}
                         isLocked={match.status === 'finished' || isSubmitting}
                         onSubmitShortcut={handleCodeSubmit}
+                        security={security}
                     />
                     <SubmissionPanel
                         onSubmit={handleCodeSubmit}

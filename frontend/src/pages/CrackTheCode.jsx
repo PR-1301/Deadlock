@@ -1417,7 +1417,7 @@ const RightPanel = React.memo(({
                         suggestOnTriggerCharacters: true,
                         acceptSuggestionOnEnter: "on",
                         tabCompletion: "on",
-                        contextmenu: !security.disableCopyPaste && !security.disableTextSelection,
+                        contextmenu: !security.disableCopyPaste && !security.disableTextSelection && !security.blockDevTools && !security.blockAiAssistant,
                         copySelection: !security.disableCopyPaste,
                         links: false,
                         dragAndDrop: false,

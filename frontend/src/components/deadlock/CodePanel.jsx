@@ -8,9 +8,10 @@ const DEADLOCK_LANGUAGES = [
     { value: 'java', label: 'Java 17', tag: 'jdk17' },
 ];
 
-const CodePanel = ({ code, setCode, language, setLanguage, isLocked, onSubmitShortcut }) => {
+const CodePanel = ({ code, setCode, language, setLanguage, isLocked, onSubmitShortcut, security: securityProp }) => {
     const teamName = localStorage.getItem('teamName') || 'UNKNOWN';
-    const { security } = useSecurity(teamName);
+    const { security: fallbackSecurity } = useSecurity(teamName, { passive: Boolean(securityProp) });
+    const security = securityProp || fallbackSecurity;
 
     const [dropdownOpen, setDropdownOpen] = useState(false);
     const [highlightedIndex, setHighlightedIndex] = useState(() =>
@@ -199,7 +200,7 @@ const CodePanel = ({ code, setCode, language, setLanguage, isLocked, onSubmitSho
                         scrollBeyondLastLine: false,
                         padding: { top: 12, bottom: 12 },
                         lineNumbersMinChars: 3,
-                        contextmenu: !security.disableCopyPaste && !security.disableTextSelection,
+                        contextmenu: !security.disableCopyPaste && !security.disableTextSelection && !security.blockDevTools && !security.blockAiAssistant,
                         copySelection: !security.disableCopyPaste,
                         links: false,
                         dragAndDrop: false,
