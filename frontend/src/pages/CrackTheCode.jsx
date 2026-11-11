@@ -1,9 +1,44 @@
 import React, { useState, useEffect } from 'react';
 import Editor from '@monaco-editor/react';
 import CrackCodeLobby from './CrackCodeLobby';
+import celestiusLogo from '../assets/celestius-logo.png';
+import larperOrCoderImg from '../assets/larper-or-coder.png';
 import './CrackTheCode.css';
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL || `http://${window.location.hostname}:5000`;
+const SUPPORTED_LANGUAGES = ['python', 'cpp', 'javascript', 'java'];
+
+const getDraftStorageKey = (teamId, sessionId) =>
+    `crackCodeDraft:${teamId || 'anon'}:${sessionId || 'default'}`;
+
+const getLangStorageKey = (teamId, sessionId) =>
+    `crackCodeLang:${teamId || 'anon'}:${sessionId || 'default'}`;
+
+const readStoredDrafts = (teamId, sessionId) => {
+    try {
+        const raw = localStorage.getItem(getDraftStorageKey(teamId, sessionId));
+        if (!raw) return {};
+        const parsed = JSON.parse(raw);
+        if (!parsed || typeof parsed !== 'object') return {};
+        const clean = {};
+        for (const lang of SUPPORTED_LANGUAGES) {
+            if (typeof parsed[lang] === 'string') {
+                clean[lang] = parsed[lang];
+            }
+        }
+        return clean;
+    } catch {
+        return {};
+    }
+};
+
+const writeStoredDrafts = (teamId, sessionId, codeMapObj) => {
+    try {
+        localStorage.setItem(getDraftStorageKey(teamId, sessionId), JSON.stringify(codeMapObj));
+    } catch {
+        // Ignore storage quota errors
+    }
+};
 
 // Question (starter code + visible test cases) is served by the backend with the session.
 // Running and grading happen server-side; hidden test cases never reach the browser.
@@ -137,49 +172,39 @@ const GameHeader = React.memo(({ initialTime, isGameStarted, submissionResult, o
     const canActivate = isOwner && !glitchStatus?.glitchUsed;
 
     return (
-        <header className="main-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <h1 style={{
-                background: 'linear-gradient(90deg, #00C9FF 0%, #92FE9D 100%)',
-                WebkitBackgroundClip: 'text',
-                WebkitTextFillColor: 'transparent',
-                textTransform: 'uppercase',
-                fontSize: '2rem',
-                fontWeight: '800',
-                margin: 0
-            }}>Crack The Code</h1>
+        <header className="main-header">
+            <div className="lc-header-brand">
+                <img src={celestiusLogo} alt="Celestius" className="lc-brand-logo" />
+                <img src={larperOrCoderImg} alt="LARPER OR CODER" className="lc-larper-logo" />
+                <span className="lc-brand-divider" aria-hidden="true" />
+                <h1 className="lc-header-title">Who&apos;s the GOAT?</h1>
+            </div>
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
+            <div className="lc-header-right">
                 {canActivate && (
                     <button
                         className="glitch-activate-btn"
                         onClick={onActivateGlitch}
-                        style={{
-                            background: 'red',
-                            color: 'white',
-                            border: '2px solid #ff0000',
-                            padding: '8px 16px',
-                            fontWeight: 'bold',
-                            cursor: 'pointer',
-                            animation: 'pulse 1s infinite'
-                        }}
                     >
-                        Unleash First Blood Skill 🩸
+                        Use First Blood Skill
                     </button>
                 )}
                 {glitchStatus?.active && (
-                    <div style={{ color: 'red', fontWeight: 'bold', animation: 'blink 0.5s infinite' }}>
+                    <div className="lc-attack-notice">
                         SYSTEM UNDER ATTACK
                     </div>
                 )}
 
-                <div className="timer" style={{
-                    fontSize: '1.5em',
-                    fontWeight: 'bold',
-                    marginRight: '20px',
-                    fontFamily: 'monospace'
-                }}>
-                    <span style={{ color: 'aliceblue' }}>Time Left: </span>
-                    <span style={{ color: secondsLeft > 1200 ? '#28a745' : (secondsLeft > 300 ? '#e67300' : '#dc3545') }}>
+                <div className="lc-timer">
+                    <svg className="lc-timer-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                        <circle cx="12" cy="12" r="10" />
+                        <polyline points="12 6 12 12 16 14" />
+                    </svg>
+                    <span className="lc-timer-label">Time Left</span>
+                    <span
+                        className="lc-timer-value"
+                        style={{ color: secondsLeft > 1200 ? '#2cbb5d' : (secondsLeft > 300 ? '#f5a21f' : '#ef4743') }}
+                    >
                         {formatTime(secondsLeft)}
                     </span>
                 </div>
@@ -214,8 +239,18 @@ const CrackTheCode = () => {
     const [isRunning, setIsRunning] = useState(false);
     const [testResults, setTestResults] = useState({});
     const [hiddenTestResult, setHiddenTestResult] = useState(null);
+    const [leftTab, setLeftTab] = useState('testcase');
+    const [runError, setRunError] = useState(null);
+    const [submitError, setSubmitError] = useState(null);
     // { language, code } of the last run that passed every visible + hidden case
     const [lastValidated, setLastValidated] = useState(null);
+    const latestCodeRef = React.useRef({});
+
+    useEffect(() => {
+        if (isGameStarted) {
+            document.title = "Who's the GOAT? // Celestius";
+        }
+    }, [isGameStarted]);
 
     // DISMISSAL STATE
     const [isDismissed, setIsDismissed] = useState(false);
@@ -297,15 +332,31 @@ const CrackTheCode = () => {
     const handleSubmitRef = React.useRef();
 
     const handleLanguageChange = React.useCallback((e) => {
-        setLanguage(e.target.value);
-    }, []);
+        const nextLang = e.target.value;
+        setLanguage(nextLang);
+        try {
+            const teamId = localStorage.getItem('teamId');
+            localStorage.setItem(getLangStorageKey(teamId, sessionId), nextLang);
+        } catch {
+            // Ignore storage errors
+        }
+    }, [sessionId]);
 
     const handleCodeChange = React.useCallback((value) => {
+        latestCodeRef.current[language] = value;
+        const teamId = localStorage.getItem('teamId');
+        writeStoredDrafts(teamId, sessionId, latestCodeRef.current);
         setCodeMap((prev) => ({
             ...prev,
             [language]: value
         }));
-    }, [language]);
+    }, [language, sessionId]);
+
+    const handleCodeImmediate = React.useCallback((lang, value) => {
+        latestCodeRef.current[lang] = value;
+        const teamId = localStorage.getItem('teamId');
+        writeStoredDrafts(teamId, sessionId, latestCodeRef.current);
+    }, [sessionId]);
 
     const handleEditorDidMount = React.useCallback((editor, monaco) => {
         monaco.languages.typescript.javascriptDefaults.setDiagnosticsOptions({
@@ -336,12 +387,17 @@ const CrackTheCode = () => {
     const handleRun = React.useCallback(async () => {
         const teamId = localStorage.getItem("teamId");
         if (!teamId) {
-            alert("Team ID not found. Please login again.");
+            setRunError("Team ID not found. Please log in again.");
+            setLeftTab('result');
             return;
         }
 
-        const code = codeMap[language] || "";
+        const code = latestCodeRef.current[language] ?? codeMap[language] ?? "";
+        setCodeMap((prev) => (prev[language] === code ? prev : { ...prev, [language]: code }));
         setIsRunning(true);
+        setLeftTab('result');
+        setRunError(null);
+        setSubmitError(null);
         setTestResults({});
         setHiddenTestResult(null);
 
@@ -351,31 +407,37 @@ const CrackTheCode = () => {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ teamId, language, code }),
             });
-            const data = await response.json();
+            const data = await response.json().catch(() => ({}));
 
             if (!response.ok) {
+                const detail = [data.message, data.error].filter(Boolean).join(": ");
+                const errMsg = detail || `Execution failed (HTTP ${response.status})`;
+                setRunError(errMsg);
                 const failed = {};
                 testCases.forEach((_, i) => {
-                    failed[i] = { log: data.message || "Execution failed", result: "Error", isCorrect: false, status: "error" };
+                    failed[i] = { log: errMsg, result: "Error", isCorrect: false, status: "error" };
                 });
                 setTestResults(failed);
+                setLastValidated(null);
                 return;
             }
 
             const results = {};
-            data.results.forEach((r, i) => { results[i] = { ...r, status: "success" }; });
+            (data.results || []).forEach((r, i) => {
+                const isErr = r.result === "Runtime Error" || r.result === "Error";
+                results[i] = { ...r, status: isErr ? "error" : "success" };
+            });
             setTestResults(results);
-
-            if (data.hiddenPassed === true) setHiddenTestResult("Hidden Test Case Passed!");
-            else if (data.hiddenPassed === false) setHiddenTestResult("Hidden Test Case Failed");
-
             setLastValidated(data.validated ? { language, code } : null);
         } catch (error) {
+            const errMsg = error?.message ? `Network Error: ${error.message}` : "Network error while executing code.";
+            setRunError(errMsg);
             const failed = {};
             testCases.forEach((_, i) => {
-                failed[i] = { log: "Network Error", result: error.message, isCorrect: false, status: "error" };
+                failed[i] = { log: errMsg, result: "Error", isCorrect: false, status: "error" };
             });
             setTestResults(failed);
+            setLastValidated(null);
         } finally {
             setIsRunning(false);
         }
@@ -384,11 +446,20 @@ const CrackTheCode = () => {
     const handleSubmit = React.useCallback(async (isAutoSubmit = false) => {
         const teamId = localStorage.getItem("teamId");
         if (!teamId || !sessionId) {
-            if (!isAutoSubmit) alert("Session information missing.");
+            if (!isAutoSubmit) setSubmitError("Session information missing. Please refresh and try again.");
             return;
         }
 
+        const code = latestCodeRef.current[language] ?? codeMap[language] ?? "";
+        setCodeMap((prev) => (prev[language] === code ? prev : { ...prev, [language]: code }));
         setIsSubmitting(true);
+        setSubmitError(null);
+        if (!isAutoSubmit) {
+            setLeftTab('result');
+            setRunError(null);
+            setHiddenTestResult(null);
+        }
+
         try {
             const response = await fetch(`${BASE_URL}/api/public/crack-code/submit`, {
                 method: 'POST',
@@ -396,24 +467,44 @@ const CrackTheCode = () => {
                 body: JSON.stringify({
                     teamId,
                     sessionId: sessionId,
-                    submittedLogic: codeMap[language] || "",
+                    submittedLogic: code,
                     language,
                     autoSubmit: isAutoSubmit
                 }),
             });
 
-            const data = await response.json();
+            const data = await response.json().catch(() => ({}));
             if (response.ok) {
+                if (data.passed === false && !isAutoSubmit) {
+                    if (Array.isArray(data.results)) {
+                        const results = {};
+                        data.results.forEach((r, i) => {
+                            const isErr = r.result === "Runtime Error" || r.result === "Error";
+                            results[i] = { ...r, status: isErr ? "error" : "success" };
+                        });
+                        setTestResults(results);
+                    }
+                    if (data.failedStage === 'hidden') {
+                        setHiddenTestResult("Failed hidden testcase");
+                        setRunError(data.message || "Failed hidden testcase. Handle edge cases and try again.");
+                    } else {
+                        setRunError(data.message || "Visible testcases failed.");
+                    }
+                    setLastValidated(null);
+                    return;
+                }
+
                 setSubmissionResult({
                     isFirst: data.isFirst,
                     message: data.message
                 });
             } else {
-                if (!isAutoSubmit) alert(data.message || "Submission failed");
+                const errMsg = [data.message, data.error].filter(Boolean).join(": ") || `Submission failed (HTTP ${response.status})`;
+                if (!isAutoSubmit) setSubmitError(errMsg);
             }
         } catch (error) {
             console.error("Submission error:", error);
-            if (!isAutoSubmit) alert("Network error during submission");
+            if (!isAutoSubmit) setSubmitError(error?.message ? `Network Error: ${error.message}` : "Network error during submission.");
         } finally {
             setIsSubmitting(false);
         }
@@ -434,7 +525,7 @@ const CrackTheCode = () => {
     // Server is the source of truth on submit; this only gates the button.
     const isSubmitEnabled = !!lastValidated
         && lastValidated.language === language
-        && lastValidated.code === codeMap[language];
+        && lastValidated.code === (latestCodeRef.current[language] ?? codeMap[language]);
 
     if (!isGameStarted) {
         return <CrackCodeLobby onGameReady={(sessionData) => {
@@ -447,8 +538,22 @@ const CrackTheCode = () => {
                 setTimeLeft(remaining);
                 setSessionId(sessionData.sessionId);
                 if (sessionData.question) {
+                    const teamId = localStorage.getItem("teamId");
+                    const starter = sessionData.question.starterCode || {};
+                    const savedDrafts = readStoredDrafts(teamId, sessionData.sessionId);
+                    const mergedCode = { ...starter, ...savedDrafts };
+                    latestCodeRef.current = { ...mergedCode };
                     setTestCases(sessionData.question.testCases || []);
-                    setCodeMap(sessionData.question.starterCode || {});
+                    setCodeMap(mergedCode);
+
+                    try {
+                        const savedLang = localStorage.getItem(getLangStorageKey(teamId, sessionData.sessionId));
+                        if (savedLang && SUPPORTED_LANGUAGES.includes(savedLang)) {
+                            setLanguage(savedLang);
+                        }
+                    } catch {
+                        // Ignore storage errors
+                    }
                 }
                 if (sessionData.submission) {
                     setSubmissionResult(sessionData.submission);
@@ -558,6 +663,11 @@ const CrackTheCode = () => {
                     setActiveTestCase={setActiveTestCase}
                     testResults={testResults}
                     hiddenTestResult={hiddenTestResult}
+                    isRunning={isRunning}
+                    isSubmitting={isSubmitting}
+                    leftTab={leftTab}
+                    setLeftTab={setLeftTab}
+                    runError={runError}
                 />
 
                 <RightPanel
@@ -566,12 +676,13 @@ const CrackTheCode = () => {
                     isRunning={isRunning}
                     isSubmitting={isSubmitting}
                     isSubmitEnabled={isSubmitEnabled}
-                    activeTestCase={activeTestCase}
-                    testResults={testResults}
+                    submitError={submitError}
+                    clearSubmitError={() => setSubmitError(null)}
                     handleLanguageChange={handleLanguageChange}
                     handleRun={handleRun}
                     handleSubmit={handleSubmit}
                     handleCodeChange={handleCodeChange}
+                    handleCodeImmediate={handleCodeImmediate}
                     handleEditorDidMount={handleEditorDidMount}
                     security={security}
                 />
@@ -582,73 +693,219 @@ const CrackTheCode = () => {
 
 // --- Memoized Panel Components ---
 
-const LeftPanel = React.memo(({ testCases, activeTestCase, setActiveTestCase, testResults, hiddenTestResult }) => {
+const CaseStatusIcon = ({ isCorrect }) => (
+    <span className={`tc-status-icon ${isCorrect ? 'pass' : 'fail'}`} aria-hidden="true">
+        {isCorrect ? (
+            <svg width="13" height="13" viewBox="0 0 16 16" fill="none">
+                <path d="M3.5 8.5L6.5 11.5L12.5 4.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+        ) : (
+            <svg width="13" height="13" viewBox="0 0 16 16" fill="none">
+                <path d="M4.5 4.5L11.5 11.5M11.5 4.5L4.5 11.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+            </svg>
+        )}
+    </span>
+);
+
+const LeftPanel = React.memo(({
+    testCases,
+    activeTestCase,
+    setActiveTestCase,
+    testResults,
+    hiddenTestResult,
+    isRunning,
+    isSubmitting,
+    leftTab,
+    setLeftTab,
+    runError
+}) => {
+    const isBusy = isRunning || isSubmitting;
+    const activeResult = testResults[activeTestCase];
+    const hasResults = Object.keys(testResults).length > 0;
+    const allVisiblePassed = hasResults && testCases.every((_, i) => testResults[i]?.isCorrect);
+
+    const isCaseError = Boolean(
+        activeResult && (
+            activeResult.status === 'error' ||
+            activeResult.result === 'Runtime Error' ||
+            activeResult.result === 'Error'
+        )
+    );
+
+    const getVerdictInfo = () => {
+        if (hiddenTestResult && hiddenTestResult.toLowerCase().includes('failed')) {
+            return { label: 'Failed Hidden Testcase', cls: 'error' };
+        }
+        if (runError) return { label: 'Execution Error', cls: 'error' };
+        if (activeResult) {
+            if (activeResult.result === 'Runtime Error') return { label: 'Runtime Error', cls: 'error' };
+            if (activeResult.status === 'error' || activeResult.result === 'Error') return { label: 'Compile / Execution Error', cls: 'error' };
+            if (!activeResult.isCorrect) return { label: 'Wrong Answer', cls: 'error' };
+            if (allVisiblePassed) return { label: 'Accepted', cls: 'accepted' };
+            return { label: 'Wrong Answer', cls: 'error' };
+        }
+        return null;
+    };
+
+    const verdict = getVerdictInfo();
+
+    const passedCount = hasResults ? testCases.filter((_, i) => testResults[i]?.isCorrect).length : 0;
+
     return (
         <div className="panel left-panel">
-            <div className="panel-header">
-                <h2>Testcases</h2>
+            <div className="lc-panel-tabs" role="tablist">
+                <button
+                    type="button"
+                    role="tab"
+                    aria-selected={leftTab === 'testcase'}
+                    className={`lc-mode-tab ${leftTab === 'testcase' ? 'active' : ''}`}
+                    onClick={() => setLeftTab('testcase')}
+                >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                        <polyline points="4 17 10 11 4 5" />
+                        <line x1="12" y1="19" x2="20" y2="19" />
+                    </svg>
+                    <span>Testcase</span>
+                </button>
+                <button
+                    type="button"
+                    role="tab"
+                    aria-selected={leftTab === 'result'}
+                    className={`lc-mode-tab ${leftTab === 'result' ? 'active' : ''}`}
+                    onClick={() => setLeftTab('result')}
+                >
+                    {isBusy ? (
+                        <span className="lc-spinner sm" aria-hidden="true" />
+                    ) : (
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                            <polyline points="9 11 12 14 22 4" />
+                            <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />
+                        </svg>
+                    )}
+                    <span>Test Result</span>
+                </button>
             </div>
-            <div className="testcase-tabs">
-                {testCases.map((_, index) => {
-                    const result = testResults[index];
-                    let statusClass = '';
-                    if (result) {
-                        statusClass = result.isCorrect ? 'success' : 'error';
-                    }
 
-                    return (
-                        <button
-                            key={index}
-                            className={`tab-btn ${activeTestCase === index ? 'active' : ''} ${statusClass}`}
-                            onClick={() => setActiveTestCase(index)}
-                            style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
-                        >
-                            Case {index + 1}
-                            {result?.isCorrect !== undefined && (
-                                <span style={{
-                                    color: result.isCorrect ? '#28a745' : '#dc3545',
-                                    fontSize: '1.2em'
-                                }}>
-                                    {result.isCorrect ? '✔' : '✘'}
+            <div className="lc-left-body">
+                {leftTab === 'testcase' && (
+                    <div className="lc-prompt-hint">
+                        Deduce the hidden logic from the sample inputs and outputs, then implement <code>decodeLogic</code>.
+                    </div>
+                )}
+
+                {leftTab === 'result' && (
+                    <div className="lc-verdict-row">
+                        <div className="lc-verdict-main">
+                            {isBusy ? (
+                                <span className="lc-verdict-text running">
+                                    <span className="lc-spinner" aria-hidden="true" />
+                                    {isSubmitting
+                                        ? 'Submitting and running all testcases (including hidden)...'
+                                        : 'Running testcases...'}
                                 </span>
+                            ) : verdict ? (
+                                <>
+                                    <span className={`lc-verdict-text ${verdict.cls}`}>{verdict.label}</span>
+                                    {hasResults && (!runError || hiddenTestResult) && (
+                                        <span className="lc-pass-count">
+                                            {passedCount}/{testCases.length} visible passed
+                                        </span>
+                                    )}
+                                </>
+                            ) : (
+                                <span className="lc-empty-state">Run your code to see test results.</span>
                             )}
-                        </button>
-                    );
-                })}
-            </div>
-            <div className="testcase-content">
-                <div className="io-group">
-                    <span className="label">Input =</span>
-                    <div className="io-box">{testCases[activeTestCase]?.input}</div>
-                </div>
-                <div className="io-group">
-                    <span className="label">Output =</span>
-                    <div className="io-box">{testCases[activeTestCase]?.output}</div>
-                </div>
-            </div>
+                        </div>
+                    </div>
+                )}
 
-            {hiddenTestResult && (
-                <div style={{
-                    padding: '15px',
-                    margin: '10px 20px',
-                    background: hiddenTestResult.includes('Passed') ? 'rgba(40, 167, 69, 0.2)' : 'rgba(220, 53, 69, 0.2)',
-                    border: `1px solid ${hiddenTestResult.includes('Passed') ? '#28a745' : '#dc3545'}`,
-                    borderRadius: '8px',
-                    color: hiddenTestResult.includes('Passed') ? '#28a745' : '#dc3545',
-                    fontWeight: 'bold',
-                    textAlign: 'center'
-                }}>
-                    {hiddenTestResult}
+                <div className="testcase-tabs">
+                    {testCases.map((_, index) => {
+                        const result = testResults[index];
+                        return (
+                            <button
+                                key={index}
+                                type="button"
+                                className={`tab-btn ${activeTestCase === index ? 'active' : ''}`}
+                                onClick={() => setActiveTestCase(index)}
+                            >
+                                {isBusy ? (
+                                    <span className="lc-spinner sm" aria-label={`Running Case ${index + 1}`} />
+                                ) : (
+                                    result?.isCorrect !== undefined && <CaseStatusIcon isCorrect={result.isCorrect} />
+                                )}
+                                <span>Case {index + 1}</span>
+                            </button>
+                        );
+                    })}
                 </div>
-            )}
+
+                {leftTab === 'testcase' ? (
+                    <div className="testcase-content">
+                        <div className="io-group">
+                            <span className="label">Input</span>
+                            <pre className="io-box">{testCases[activeTestCase]?.input || ""}</pre>
+                        </div>
+                        <div className="io-group">
+                            <span className="label">Expected Output</span>
+                            <pre className="io-box">{testCases[activeTestCase]?.output ?? ""}</pre>
+                        </div>
+                    </div>
+                ) : (
+                    <div className="testcase-content">
+                        {!isBusy && runError && (
+                            <div className="io-group">
+                                <span className="label">Error Message</span>
+                                <pre className="lc-error-box">{runError}</pre>
+                            </div>
+                        )}
+
+                        {!isBusy && !runError && isCaseError && (
+                            <div className="io-group">
+                                <span className="label">Error Details</span>
+                                <pre className="lc-error-box">
+                                    {activeResult?.log || activeResult?.result || "Execution failed."}
+                                </pre>
+                            </div>
+                        )}
+
+                        <div className="io-group">
+                            <span className="label">Input</span>
+                            <pre className="io-box">{testCases[activeTestCase]?.input || ""}</pre>
+                        </div>
+
+                        {!isBusy && !isCaseError && activeResult?.log && (
+                            <div className="io-group">
+                                <span className="label">Stdout</span>
+                                <pre className="io-box">{activeResult.log}</pre>
+                            </div>
+                        )}
+
+                        {!isBusy && !isCaseError && activeResult && (
+                            <div className="io-group">
+                                <span className="label">Output</span>
+                                <pre className={`io-box ${activeResult.isCorrect ? 'output-pass' : 'output-fail'}`}>
+                                    {activeResult.result || ""}
+                                </pre>
+                            </div>
+                        )}
+
+                        <div className="io-group">
+                            <span className="label">Expected</span>
+                            <pre className="io-box">{testCases[activeTestCase]?.output ?? ""}</pre>
+                        </div>
+                    </div>
+                )}
+            </div>
         </div>
     );
 });
 
 const RightPanel = React.memo(({
     language, code, isRunning, isSubmitting, isSubmitEnabled,
-    activeTestCase, testResults, handleLanguageChange, handleRun,
-    handleSubmit, handleCodeChange, handleEditorDidMount,
+    submitError, clearSubmitError,
+    handleLanguageChange, handleRun,
+    handleSubmit, handleCodeChange, handleCodeImmediate, handleEditorDidMount,
     security
 }) => {
     // Local state for debounced editor updates
@@ -661,7 +918,9 @@ const RightPanel = React.memo(({
 
     // Handle high-frequency changes locally
     const onInternalChange = (value) => {
-        setLocalCode(value);
+        const next = value ?? "";
+        setLocalCode(next);
+        handleCodeImmediate(language, next);
     };
 
     // Debounce the global state sync
@@ -678,6 +937,10 @@ const RightPanel = React.memo(({
         <div className="panel right-panel">
             <div className="editor-header">
                 <div className="lang-selector">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                        <polyline points="16 18 22 12 16 6" />
+                        <polyline points="8 6 2 12 8 18" />
+                    </svg>
                     <select value={language} onChange={handleLanguageChange}>
                         <option value="python">Python</option>
                         <option value="cpp">C++</option>
@@ -686,25 +949,46 @@ const RightPanel = React.memo(({
                     </select>
                 </div>
                 <div className="actions">
-                    <button className="btn run-btn" onClick={handleRun} disabled={isRunning}>
+                    <span className="lc-saved-note">Saved locally</span>
+                    <button className="btn run-btn" onClick={handleRun} disabled={isRunning || isSubmitting}>
                         {isRunning ? (
-                            <div className="loading-container">
-                                <div className="loading-bar"></div>
-                            </div>
-                        ) : 'Run'}
+                            <span className="lc-spinner sm" aria-hidden="true" />
+                        ) : (
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                                <polygon points="5 3 19 12 5 21 5 3" />
+                            </svg>
+                        )}
+                        <span>{isRunning ? 'Running' : 'Run'}</span>
                     </button>
                     <button
                         className="btn submit-btn"
                         onClick={() => handleSubmit()}
-                        disabled={!isSubmitEnabled || isSubmitting}
-                        title={!isSubmitEnabled ? "Pass all test cases (including hidden) to submit" : "Submit your code"}
+                        disabled={!isSubmitEnabled || isRunning || isSubmitting}
+                        title={!isSubmitEnabled ? "Pass all visible testcases via Run to enable Submit" : "Submit and run all testcases including hidden"}
                     >
-                        {isSubmitting ? "Uploading..." : "Submit"}
+                        {isSubmitting ? (
+                            <span className="lc-spinner sm" aria-hidden="true" />
+                        ) : (
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                                <path d="M22 2L11 13" />
+                                <path d="M22 2L15 22L11 13L2 9L22 2Z" />
+                            </svg>
+                        )}
+                        <span>{isSubmitting ? "Submitting..." : "Submit"}</span>
                     </button>
                 </div>
             </div>
-            <div className="monaco-wrapper" style={{ display: 'flex', flexDirection: 'column' }}>
 
+            {submitError && (
+                <div className="lc-inline-banner-error" role="alert">
+                    <span>{submitError}</span>
+                    <button type="button" className="lc-inline-banner-close" onClick={clearSubmitError}>
+                        Dismiss
+                    </button>
+                </div>
+            )}
+
+            <div className="monaco-wrapper" style={{ display: 'flex', flexDirection: 'column' }}>
                 <Editor
                     height="100%"
                     language={language === 'cpp' ? 'cpp' : language}
@@ -729,26 +1013,6 @@ const RightPanel = React.memo(({
                         selectionClipboard: false
                     }}
                 />
-            </div>
-
-            <div className="output-section">
-
-                <div className="console-box">
-                    <div style={{ color: '#aaa', marginBottom: '5px', fontSize: '0.85rem' }}>Console Output:</div>
-                    <pre style={{ margin: 0, color: '#e0e0e0' }}>
-                        {testResults[activeTestCase]?.log || "Run code to see output..."}
-                    </pre>
-                </div>
-                <div className="result-box" style={{
-                    border: testResults[activeTestCase]?.isCorrect === undefined
-                        ? '1px solid rgba(255, 255, 255, 0.1)'
-                        : (testResults[activeTestCase]?.isCorrect ? '2px solid #28a745' : '2px solid #dc3545')
-                }}>
-                    <div style={{ color: '#aaa', marginBottom: '5px', fontSize: '0.85rem' }}>Return Value:</div>
-                    <pre style={{ margin: 0, color: '#e0e0e0' }}>
-                        {testResults[activeTestCase]?.result || ""}
-                    </pre>
-                </div>
             </div>
         </div>
     );

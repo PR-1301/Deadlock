@@ -118,8 +118,9 @@ router.get("/team-status/:teamId", async (req, res) => {
   POST /crack-code/run
   Body: { teamId, language, code }
 
-  Runs the code against the round's visible test cases; if all pass, runs the
-  hidden test cases too. Hidden case data / output never leaves the server.
+  Runs the code ONLY against the round's visible test cases.
+  Hidden test cases are never run or revealed on /run.
+  Passing all visible cases enables /submit.
 */
 router.post("/run", async (req, res) => {
   try {
@@ -152,18 +153,8 @@ router.post("/run", async (req, res) => {
     const results = await runCases({ language, code, question, cases: question.testCases });
     const allVisiblePassed = results.every((r) => r.isCorrect);
 
-    let hiddenPassed = null; // null = not run (some visible case failed)
-    if (allVisiblePassed && question.hiddenTestCases.length > 0) {
-      const hidden = await runCases({ language, code, question, cases: question.hiddenTestCases });
-      hiddenPassed = hidden.every((r) => r.isCorrect);
-    } else if (allVisiblePassed) {
-      hiddenPassed = true;
-    }
-
-    const passedEverything = allVisiblePassed && hiddenPassed === true;
-
     session.attemptsUsed += 1;
-    session.validatedCodeHash = passedEverything ? hashSubmission(language, code) : null;
+    session.validatedCodeHash = allVisiblePassed ? hashSubmission(language, code) : null;
     await session.save();
 
     const visiblePassedCount = results.filter((r) => r.isCorrect).length;
@@ -172,16 +163,13 @@ router.post("/run", async (req, res) => {
       crackCodeSessionId: session._id,
       input: `${question.id} [${language}]`,
       code,
-      output: `visible ${visiblePassedCount}/${results.length}, hidden ${
-        hiddenPassed === null ? "not run" : hiddenPassed ? "passed" : "failed"
-      }`,
+      output: `visible ${visiblePassedCount}/${results.length}`,
       attemptNumber: session.attemptsUsed,
     });
 
     return res.json({
       results,
-      hiddenPassed,
-      validated: passedEverything,
+      validated: allVisiblePassed,
       attemptsUsed: session.attemptsUsed,
     });
   } catch (error) {
@@ -197,8 +185,10 @@ router.post("/run", async (req, res) => {
   POST /crack-code/submit
   Body: { teamId, sessionId, submittedLogic, language, autoSubmit }
 
-  Correctness is decided by the server: the submitted code must be exactly the
-  code that last passed every visible and hidden test case via /run.
+  Runs ALL test cases (visible + hidden) on the server when submitted manually.
+  - Hidden test case inputs/outputs are never sent to the client.
+  - If all visible + hidden cases pass, records the submission and claims winner if first.
+  - If any hidden case fails, informs the client without ending the session so they can retry.
 */
 router.post("/submit", async (req, res) => {
   try {
@@ -210,6 +200,9 @@ router.post("/submit", async (req, res) => {
     if (!mongoose.Types.ObjectId.isValid(teamId) || !mongoose.Types.ObjectId.isValid(sessionId)) {
       return res.status(400).json({ message: "Invalid teamId or sessionId" });
     }
+    if (!autoSubmit && !SUPPORTED_LANGUAGES.includes(language)) {
+      return res.status(400).json({ message: "Unsupported language" });
+    }
 
     if (await isGlitchBlocked(teamId)) {
       return res.status(403).json({ success: false, message: "SYSTEM GLITCH ACTIVE - ACCESS DENIED" });
@@ -220,12 +213,6 @@ router.post("/submit", async (req, res) => {
       return res.status(404).json({ message: "Session not found for this team" });
     }
 
-    // Timer expiry auto-submits are never counted as a crack
-    const isCorrect =
-      !autoSubmit &&
-      !!session.validatedCodeHash &&
-      session.validatedCodeHash === hashSubmission(language, submittedLogic);
-
     const resultMessage = (sub) =>
       sub.finalWinner
         ? "YOU WON\nYOU SUCCESSFULLY CRACKED THE CODE BY REVERSE ENGINEERING"
@@ -233,15 +220,100 @@ router.post("/submit", async (req, res) => {
           ? "YOUR EFFORTS NEED TO BE APPRECIATED\nBUT SMALL TIME MANAGEMENT LACKING DECIDED SOMEOTHER AS WINNER. YOU CRACKED THE CODE..."
           : "THANK YOU FOR PARTICIPATION\nTHE GAME HAS ENDED";
 
-    // 1. Check if CURRENT team already submitted
+    // 1. Check if CURRENT team already has a finalized submission
     const existing = await CrackCodeSubmission.findOne({ teamId, crackCodeSessionId: sessionId });
     if (existing) {
-      return res.json({ success: true, isFirst: existing.finalWinner, message: resultMessage(existing) });
+      return res.json({
+        success: true,
+        passed: existing.isCorrect,
+        isFirst: existing.finalWinner,
+        message: resultMessage(existing),
+      });
     }
 
-    // 2. Insert. A correct submission tries to claim the winner slot; the unique
-    //    partial index on { finalWinner: true } guarantees only one claim succeeds,
-    //    even when two teams submit in the same millisecond.
+    if (session.endedAt) {
+      return res.status(403).json({ message: "Session already ended" });
+    }
+
+    let isCorrect = false;
+
+    if (!autoSubmit) {
+      const question = sessionQuestion(session);
+
+      // Run visible cases first
+      const visibleResults = await runCases({
+        language,
+        code: submittedLogic,
+        question,
+        cases: question.testCases,
+      });
+      const allVisiblePassed = visibleResults.every((r) => r.isCorrect);
+
+      if (!allVisiblePassed) {
+        const visiblePassedCount = visibleResults.filter((r) => r.isCorrect).length;
+        session.attemptsUsed += 1;
+        session.validatedCodeHash = null;
+        await session.save();
+
+        await CrackCodeAttempt.create({
+          teamId,
+          crackCodeSessionId: session._id,
+          input: `${question.id} [${language}] (submit)`,
+          code: submittedLogic,
+          output: `visible ${visiblePassedCount}/${visibleResults.length}, hidden not run`,
+          attemptNumber: session.attemptsUsed,
+        });
+
+        return res.json({
+          success: true,
+          passed: false,
+          failedStage: "visible",
+          results: visibleResults,
+          message: "Visible testcases failed. Please fix and run again.",
+        });
+      }
+
+      // Visible cases passed — now run hidden testcases on server
+      const hiddenCases = question.hiddenTestCases || [];
+      let allHiddenPassed = true;
+      if (hiddenCases.length > 0) {
+        const hiddenResults = await runCases({
+          language,
+          code: submittedLogic,
+          question,
+          cases: hiddenCases,
+        });
+        allHiddenPassed = hiddenResults.every((r) => r.isCorrect);
+      }
+
+      if (!allHiddenPassed) {
+        session.attemptsUsed += 1;
+        session.validatedCodeHash = null;
+        await session.save();
+
+        await CrackCodeAttempt.create({
+          teamId,
+          crackCodeSessionId: session._id,
+          input: `${question.id} [${language}] (submit)`,
+          code: submittedLogic,
+          output: `visible ${visibleResults.length}/${visibleResults.length}, hidden failed`,
+          attemptNumber: session.attemptsUsed,
+        });
+
+        return res.json({
+          success: true,
+          passed: false,
+          failedStage: "hidden",
+          results: visibleResults,
+          message: "Failed hidden testcase. Handle edge cases and try again.",
+        });
+      }
+
+      isCorrect = true;
+    }
+
+    // 2. Finalize submission (either all cases passed or timer expired autoSubmit).
+    //    The unique partial index on { finalWinner: true } guarantees only one winner.
     const base = { teamId, crackCodeSessionId: sessionId, submittedLogic, isCorrect, submittedAt: new Date() };
     let submission;
     try {
@@ -251,7 +323,12 @@ router.post("/submit", async (req, res) => {
       // Duplicate key: either this team double-submitted, or another team already won.
       const dup = await CrackCodeSubmission.findOne({ teamId, crackCodeSessionId: sessionId });
       if (dup) {
-        return res.json({ success: true, isFirst: dup.finalWinner, message: resultMessage(dup) });
+        return res.json({
+          success: true,
+          passed: dup.isCorrect,
+          isFirst: dup.finalWinner,
+          message: resultMessage(dup),
+        });
       }
       try {
         submission = await CrackCodeSubmission.create({ ...base, finalWinner: false });
@@ -264,9 +341,17 @@ router.post("/submit", async (req, res) => {
     const isFirst = submission.finalWinner;
     await CrackCodeSession.findByIdAndUpdate(sessionId, { endedAt: new Date() });
 
-    return res.json({ success: true, isFirst, message: resultMessage(submission) });
+    return res.json({
+      success: true,
+      passed: submission.isCorrect,
+      isFirst,
+      message: resultMessage(submission),
+    });
   } catch (error) {
     console.error("Submission error:", error);
+    if (error.code === "EXECUTOR_BUSY") {
+      return res.status(503).json({ message: "Code executor is busy. Please submit again in a few seconds." });
+    }
     return res.status(500).json({ message: "Internal server error" });
   }
 });
