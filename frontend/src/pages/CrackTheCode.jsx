@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import Editor from '@monaco-editor/react';
 import CrackCodeLobby from './CrackCodeLobby';
+import GoatLogo from '../components/Goat/GoatLogo';
 import celestiusLogo from '../assets/celestius-logo.png';
 import larperOrCoderImg from '../assets/larper-or-coder.png';
 import './CrackTheCode.css';
@@ -43,100 +44,7 @@ const writeStoredDrafts = (teamId, sessionId, codeMapObj) => {
 // Question (starter code + visible test cases) is served by the backend with the session.
 // Running and grading happen server-side; hidden test cases never reach the browser.
 
-// --- Memoized Cinematic Components (Defined at top to avoid TDZ) ---
-
-const HexagonGrid = React.memo(({ isFirst }) => {
-    // Reduced from 15 to 8 for performance
-    const hexagons = React.useMemo(() => Array.from({ length: 8 }).map(() => ({
-        left: `${Math.random() * 100}%`,
-        width: `${Math.random() * 40 + 20}px`,
-        delay: `${Math.random() * 5}s`,
-        duration: `${Math.random() * 4 + 6}s`,
-    })), []);
-
-    return (
-        <div className="hexagon-grid">
-            {hexagons.map((h, i) => (
-                <svg key={i} className="hexagon" viewBox="0 0 100 100" style={{
-                    position: 'absolute',
-                    left: h.left,
-                    width: h.width,
-                    animationDelay: h.delay,
-                    animationDuration: h.duration,
-                    fill: 'none',
-                    stroke: isFirst ? '#00ff41' : '#ff9d00',
-                    strokeWidth: '1'
-                }}>
-                    <path d="M50 5 L90 27.5 L90 72.5 L50 95 L10 72.5 L10 27.5 Z" />
-                </svg>
-            ))}
-        </div>
-    );
-});
-
-const EmberField = React.memo(({ isFirst }) => {
-    // Reduced from 30 to 15 for performance
-    const embers = React.useMemo(() => Array.from({ length: 12 }).map(() => ({
-        left: `${Math.random() * 100}%`,
-        duration: `${Math.random() * 2 + 3}s`,
-        delay: `${Math.random() * 3}s`,
-        drift: `${(Math.random() - 0.5) * 150}px`,
-        size: `${Math.random() * 2 + 2}px`,
-    })), []);
-
-    return (
-        <div className="ember-field">
-            {embers.map((e, i) => (
-                <div
-                    key={i}
-                    className="ember"
-                    style={{
-                        left: e.left,
-                        background: isFirst ? '#00ff41' : '#ff9d00',
-                        boxShadow: `0 0 5px ${isFirst ? '#00ff41' : '#ff9d00'}`,
-                        animationDuration: e.duration,
-                        animationDelay: e.delay,
-                        '--drift': e.drift,
-                        width: e.size,
-                        height: e.size
-                    }}
-                ></div>
-            ))}
-        </div>
-    );
-});
-
-const DigitalRain = React.memo(({ isFirst }) => {
-    // Reduced from 20 to 12
-    const drops = React.useMemo(() => {
-        const charset = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-        return Array.from({ length: 12 }).map(() => ({
-            duration: `${Math.random() * 1.5 + 1}s`,
-            delay: `${Math.random() * 1.5}s`,
-            content: Array.from({ length: 12 }).map(() => charset[Math.floor(Math.random() * charset.length)]).join('')
-        }));
-    }, []);
-
-    return (
-        <div className="digital-rain">
-            {drops.map((d, i) => (
-                <span
-                    key={i}
-                    className="rain-drop"
-                    style={{
-                        animationDuration: d.duration,
-                        animationDelay: d.delay,
-                        color: isFirst ? '#00ff41' : '#ff9d00'
-                    }}
-                >
-                    {d.content}
-                </span>
-            ))}
-        </div>
-    );
-});
-
-const GameHeader = React.memo(({ initialTime, isGameStarted, submissionResult, onExpire, glitchStatus, onActivateGlitch }) => {
+const GameHeader = React.memo(({ teamName, initialTime, isGameStarted, submissionResult, onExpire, glitchStatus, onActivateGlitch }) => {
     const [secondsLeft, setSecondsLeft] = React.useState(initialTime);
 
     // Sync initialTime if it changes (e.g. on lobby transition)
@@ -172,15 +80,19 @@ const GameHeader = React.memo(({ initialTime, isGameStarted, submissionResult, o
     const canActivate = isOwner && !glitchStatus?.glitchUsed;
 
     return (
-        <header className="main-header">
-            <div className="lc-header-brand">
-                <img src={celestiusLogo} alt="Celestius" className="lc-brand-logo" />
-                <img src={larperOrCoderImg} alt="LARPER OR CODER" className="lc-larper-logo" />
-                <span className="lc-brand-divider" aria-hidden="true" />
-                <h1 className="lc-header-title">Who&apos;s the GOAT?</h1>
+        <header className="arena-header">
+            <div className="arena-header-left">
+                <img src={celestiusLogo} alt="Celestius" className="arena-brand-icon cel-img" />
+                <span className="arena-team-tag">
+                    team <b>{teamName}</b>
+                </span>
             </div>
 
-            <div className="lc-header-right">
+            <div className="arena-header-center">
+                <GoatLogo className="goat-arena-logo" />
+            </div>
+
+            <div className="arena-header-right">
                 {canActivate && (
                     <button
                         className="glitch-activate-btn"
@@ -190,24 +102,26 @@ const GameHeader = React.memo(({ initialTime, isGameStarted, submissionResult, o
                     </button>
                 )}
                 {glitchStatus?.active && (
-                    <div className="lc-attack-notice">
+                    <div className="arena-attack-notice">
                         SYSTEM UNDER ATTACK
                     </div>
                 )}
 
-                <div className="lc-timer">
-                    <svg className="lc-timer-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <div className="arena-timer">
+                    <svg className="arena-timer-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                         <circle cx="12" cy="12" r="10" />
                         <polyline points="12 6 12 12 16 14" />
                     </svg>
-                    <span className="lc-timer-label">Time Left</span>
+                    <span className="arena-timer-label">Time</span>
                     <span
-                        className="lc-timer-value"
-                        style={{ color: secondsLeft > 1200 ? '#2cbb5d' : (secondsLeft > 300 ? '#f5a21f' : '#ef4743') }}
+                        className="arena-timer-value"
+                        style={{ color: secondsLeft > 1200 ? '#3ddc97' : (secondsLeft > 300 ? '#f5a524' : '#ff4757') }}
                     >
                         {formatTime(secondsLeft)}
                     </span>
                 </div>
+
+                <img src={larperOrCoderImg} alt="LARPER OR CODER" className="arena-brand-icon lar-img" />
             </div>
         </header>
     );
@@ -565,70 +479,87 @@ const CrackTheCode = () => {
 
     // --- Performance Optimization: Unmount main UI on result ---
     if (submissionResult) {
+        const isFirst = Boolean(submissionResult.isFirst);
+        const isCracked = !isFirst && (submissionResult.message || "").includes("APPRECIATED");
+        const resultToneClass = isFirst ? "is-winner" : isCracked ? "is-cracked" : "is-ended";
+        const messageLines = (submissionResult?.message || "").split('\n');
+        const headline = isFirst
+            ? (<>You won.<br />First to crack it.</>)
+            : isCracked
+                ? (<>Code cracked.<br />Round complete.</>)
+                : (<>Session ended.<br />Time expired.</>);
+
         return (
-            <div className={`crack-page ending`}>
-                <div className={`cyber-modal-overlay ${submissionResult.isFirst ? 'winner chromatic-pulse' : 'slower'}`}>
-                    <div className="neon-scanner" style={{
-                        background: `linear-gradient(90deg, transparent, ${submissionResult.isFirst ? 'rgba(0, 255, 65, 0.8)' : 'rgba(255, 157, 0, 0.8)'}, transparent)`,
-                        boxShadow: `0 0 20px ${submissionResult.isFirst ? 'rgba(0, 255, 65, 0.5)' : 'rgba(255, 157, 0, 0.5)'}`
-                    }}></div>
+            <div className={`goat-result-page ${resultToneClass}`}>
+                <header className="brands">
+                    <img src={celestiusLogo} alt="Celestius" className="brand-icon cel-img" />
+                    <img src={larperOrCoderImg} alt="LARPER OR CODER" className="brand-icon lar-img" />
+                </header>
 
-                    <HexagonGrid isFirst={submissionResult.isFirst} />
-                    <div className={`god-rays ${submissionResult.isFirst ? 'green' : 'amber'}`}></div>
-                    <EmberField isFirst={submissionResult.isFirst} />
-                    <div className="digital-noise"></div>
-                    <DigitalRain isFirst={submissionResult.isFirst} />
+                <div className="goat-hero-slot">
+                    <GoatLogo />
+                </div>
 
-                    <div className={`cyber-modal-content ${submissionResult.isFirst ? 'winner' : 'slower'}`}>
-                        {submissionResult.isFirst && (
-                            <>
-                                <div className="cyber-crown-container">
-                                    <svg className="cyber-crown-svg" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                        <path d="M10 80L20 40L40 60L50 20L60 60L80 40L90 80H10Z" fill="#00ff41" fillOpacity="0.2" stroke="#00ff41" strokeWidth="2" />
-                                        <circle cx="50" cy="20" r="3" fill="#00ff41" />
-                                        <circle cx="20" cy="40" r="3" fill="#00ff41" />
-                                        <circle cx="80" cy="40" r="3" fill="#00ff41" />
-                                        <circle cx="10" cy="80" r="3" fill="#00ff41" />
-                                        <circle cx="90" cy="80" r="3" fill="#00ff41" />
-                                    </svg>
-                                </div>
-                                <div className="victory-shockwave">
-                                    <div className="shock-ring shock-1"></div>
-                                    <div className="shock-ring shock-2"></div>
-                                    <div className="shock-ring shock-3"></div>
-                                </div>
-                            </>
-                        )}
-                        <div className="scanline"></div>
-                        <div className="glitch-wrapper">
-                            {submissionResult.isFirst && <div className="critical-status">// CRITICAL VICTORY //</div>}
-                            <h2 className="cyber-title glitch" data-text={
-                                submissionResult.isFirst
-                                    ? "SYSTEM OVERRIDE"
-                                    : submissionResult.message.includes("APPRECIATED")
-                                        ? "CODE CRACKED"
-                                        : "BREACH DETECTED"
-                            }>
-                                {submissionResult.isFirst
-                                    ? "SYSTEM OVERRIDE"
-                                    : submissionResult.message.includes("APPRECIATED")
-                                        ? "CODE CRACKED"
-                                        : "BREACH DETECTED"}
-                            </h2>
+                <aside className="side" aria-hidden="true">
+                    <b>WHO&apos;S THE GOAT?</b>
+                    <span>{isFirst ? 'champion verified' : isCracked ? 'solution accepted' : 'session finalized'}</span>
+                </aside>
+
+                <main className="stage">
+                    <div className="num-col" aria-label="Round 02">
+                        <div className="rd" aria-hidden="true">
+                            {isFirst ? 'VICTORY' : isCracked ? 'SOLVED' : 'CONCLUDED'}
                         </div>
-                        <p className="cyber-message">
-                            {(submissionResult?.message || "").split('\n').map((line, index) => (
-                                <span key={index} className={index === 0 ? (submissionResult?.isFirst ? "winner-highlight" : "participation-highlight") : ""}>
+                        <div className="num">02</div>
+                    </div>
+
+                    <div className="info" aria-live="polite">
+                        <h1>{headline}</h1>
+                        <p className="lede">
+                            {messageLines.map((line, index) => (
+                                <React.Fragment key={index}>
                                     {line}
-                                    {index === 0 && <br />}
-                                </span>
+                                    {index < messageLines.length - 1 && <br />}
+                                </React.Fragment>
                             ))}
                         </p>
-                        <div className="infinite-lock-text">
-                            // SESSION PERSISTENCE ACTIVE //
+
+                        <ul className="log">
+                            <li>
+                                <span>team</span>
+                                <span className="l"></span>
+                                <span className={isFirst ? 'ok' : isCracked ? 'lock' : 'term'}>{teamName}</span>
+                            </li>
+                            <li>
+                                <span>round 02</span>
+                                <span className="l"></span>
+                                <span className={isFirst ? 'ok' : isCracked ? 'lock' : 'term'}>
+                                    {isFirst ? 'winner' : isCracked ? 'cracked' : 'ended'}
+                                </span>
+                            </li>
+                            <li>
+                                <span>submission</span>
+                                <span className="l"></span>
+                                <span className={isFirst ? 'ok' : 'lock'}>recorded</span>
+                            </li>
+                        </ul>
+
+                        <div className="wait">
+                            <span>
+                                session locked · awaiting referee
+                                <i className="cur" />
+                            </span>
                         </div>
                     </div>
-                </div>
+                </main>
+
+                <footer className="route" aria-label="Tournament progress">
+                    <span className="won">R1 won</span>
+                    <span className="seg done"></span>
+                    <span className={isFirst ? 'ok' : isCracked ? 'lock' : 'term'}>
+                        {isFirst ? 'R2 champion' : isCracked ? 'R2 cracked' : 'R2 ended'}
+                    </span>
+                </footer>
             </div>
         );
     }
@@ -648,6 +579,7 @@ const CrackTheCode = () => {
             )}
 
             <GameHeader
+                teamName={teamName}
                 initialTime={timeLeft}
                 isGameStarted={isGameStarted}
                 submissionResult={submissionResult}
@@ -687,6 +619,12 @@ const CrackTheCode = () => {
                     security={security}
                 />
             </div>
+
+            <footer className="arena-route" aria-label="Tournament progress">
+                <span className="won">R1 won</span>
+                <span className="seg done"></span>
+                <span className="live">R2 live</span>
+            </footer>
         </div>
     );
 };
@@ -754,36 +692,39 @@ const LeftPanel = React.memo(({
     return (
         <div className="panel left-panel">
             <div className="lc-panel-tabs" role="tablist">
-                <button
-                    type="button"
-                    role="tab"
-                    aria-selected={leftTab === 'testcase'}
-                    className={`lc-mode-tab ${leftTab === 'testcase' ? 'active' : ''}`}
-                    onClick={() => setLeftTab('testcase')}
-                >
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                        <polyline points="4 17 10 11 4 5" />
-                        <line x1="12" y1="19" x2="20" y2="19" />
-                    </svg>
-                    <span>Testcase</span>
-                </button>
-                <button
-                    type="button"
-                    role="tab"
-                    aria-selected={leftTab === 'result'}
-                    className={`lc-mode-tab ${leftTab === 'result' ? 'active' : ''}`}
-                    onClick={() => setLeftTab('result')}
-                >
-                    {isBusy ? (
-                        <span className="lc-spinner sm" aria-hidden="true" />
-                    ) : (
+                <div className="lc-panel-tab-group">
+                    <button
+                        type="button"
+                        role="tab"
+                        aria-selected={leftTab === 'testcase'}
+                        className={`lc-mode-tab ${leftTab === 'testcase' ? 'active' : ''}`}
+                        onClick={() => setLeftTab('testcase')}
+                    >
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                            <polyline points="9 11 12 14 22 4" />
-                            <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />
+                            <polyline points="4 17 10 11 4 5" />
+                            <line x1="12" y1="19" x2="20" y2="19" />
                         </svg>
-                    )}
-                    <span>Test Result</span>
-                </button>
+                        <span>testcase</span>
+                    </button>
+                    <button
+                        type="button"
+                        role="tab"
+                        aria-selected={leftTab === 'result'}
+                        className={`lc-mode-tab ${leftTab === 'result' ? 'active' : ''}`}
+                        onClick={() => setLeftTab('result')}
+                    >
+                        {isBusy ? (
+                            <span className="lc-spinner sm" aria-hidden="true" />
+                        ) : (
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                                <polyline points="9 11 12 14 22 4" />
+                                <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />
+                            </svg>
+                        )}
+                        <span>test_result</span>
+                    </button>
+                </div>
+                <span className="lc-panel-rd">ROUND 02</span>
             </div>
 
             <div className="lc-left-body">
