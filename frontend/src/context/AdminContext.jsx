@@ -21,7 +21,7 @@ export const AdminProvider = ({ children }) => {
         const socketHost = import.meta.env.VITE_API_BASE_URL || `http://${window.location.hostname}:5000`;
 
         socketRef.current = io(socketHost, {
-            transports: ['websocket', 'polling']
+            transports: ['polling', 'websocket']
         });
 
         socketRef.current.on('connect', () => {

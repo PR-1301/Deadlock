@@ -64,7 +64,7 @@ const CrackCodeLobby = ({ onGameReady }) => {
     };
 
     useEffect(() => {
-        document.title = "ROUND 02 // CRACK THE CODE // Celestius";
+        document.title = "ROUND 02 // WHO'S THE GOAT? // Celestius";
         if (!teamId) {
             setGameStatusLoading(false);
             return;
@@ -123,7 +123,7 @@ const CrackCodeLobby = ({ onGameReady }) => {
                 <SceneBackground />
                 <div className="crack-lobby-loading-box">
                     <div className="crack-radar-pulse" />
-                    <div className="crack-loader-title">INITIALIZING CRACK THE CODE...</div>
+                    <div className="crack-loader-title">INITIALIZING WHO'S THE GOAT?...</div>
                     <div className="crack-loader-sub">CALIBRATING DUO CLEARANCE & SESSION MATRIX</div>
                 </div>
             </div>
@@ -147,7 +147,7 @@ const CrackCodeLobby = ({ onGameReady }) => {
                 </div>
                 <div className="navbar-center-tag">
                     <span className={`live-pulse-dot ${isWinner ? 'active' : isLoser ? 'error' : 'pending'}`} />
-                    <span className="navbar-tag-text">ROUND 02 // CRACK THE CODE</span>
+                    <span className="navbar-tag-text">ROUND 02 // WHO'S THE GOAT?</span>
                 </div>
                 <div className="navbar-brand-right">
                     <img src={larperOrCoderImg} alt="LARPER OR CODER" className="larper-coder-nav-logo" />
@@ -162,7 +162,7 @@ const CrackCodeLobby = ({ onGameReady }) => {
                         <span className="badge-dot" />
                         <span>LOGIC DECRYPTION PROTOCOL</span>
                     </div>
-                    <h1 className="hero-title">CRACK THE CODE</h1>
+                    <h1 className="hero-title">Who's the GOAT?</h1>
                     <div className="hero-status-tag">
                         {isWinner ? (
                             globalStarted ? (
