@@ -17,13 +17,51 @@ const CrackCodeLobby = ({ onGameReady }) => {
     const teamName = localStorage.getItem("teamName") || "ALPHA DUO";
 
     const storedMembers = localStorage.getItem('teamMembers');
-    const members = useMemo(() => {
+    const displayMembers = useMemo(() => {
+        if (teamStatus?.members && Array.isArray(teamStatus.members) && teamStatus.members.length > 0) {
+            return teamStatus.members;
+        }
         try {
             return storedMembers ? JSON.parse(storedMembers) : [];
         } catch {
             return [];
         }
-    }, [storedMembers]);
+    }, [teamStatus?.members, storedMembers]);
+
+    const displayTeamName = teamStatus?.name || teamName;
+
+    const [isDownloadingCertificates, setIsDownloadingCertificates] = useState(false);
+    const [downloadError, setDownloadError] = useState(null);
+
+    const handleDownloadCertificates = async () => {
+        if (!teamId || isDownloadingCertificates) return;
+        try {
+            setIsDownloadingCertificates(true);
+            setDownloadError(null);
+
+            const res = await fetch(`${BASE_URL}/api/public/crack-code/certificate/${teamId}`);
+            if (!res.ok) {
+                const errData = await res.json().catch(() => ({}));
+                throw new Error(errData.message || "Failed to download certificates");
+            }
+
+            const blob = await res.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = url;
+            const filename = `${(displayTeamName || "Team").replace(/\s+/g, "_")}_Certificates.zip`;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
+        } catch (err) {
+            console.error("Certificate download error:", err);
+            setDownloadError(err.message || "Could not generate certificates. Please try again.");
+        } finally {
+            setIsDownloadingCertificates(false);
+        }
+    };
 
     useEffect(() => {
         document.title = "ROUND 02 // WHO'S THE GOAT? // Celestius";
@@ -172,7 +210,7 @@ const CrackCodeLobby = ({ onGameReady }) => {
                                 </div>
                                 <div className="team-meta-info">
                                     <span className="team-meta-label">DUO NAME</span>
-                                    <h2 className="team-display-name">{teamName}</h2>
+                                    <h2 className="team-display-name">{displayTeamName}</h2>
                                 </div>
                             </div>
 
@@ -182,11 +220,11 @@ const CrackCodeLobby = ({ onGameReady }) => {
                                 <div className="operatives-list">
                                     <div className="operative-chip">
                                         <span className="operative-idx">01</span>
-                                        <span className="operative-name">{members[0] || 'Operative 1'}</span>
+                                        <span className="operative-name">{displayMembers[0] || 'Operative 1'}</span>
                                     </div>
                                     <div className="operative-chip">
                                         <span className="operative-idx">02</span>
-                                        <span className="operative-name">{members[1] || 'Operative 2'}</span>
+                                        <span className="operative-name">{displayMembers[1] || 'Operative 2'}</span>
                                     </div>
                                 </div>
                             </div>
@@ -311,7 +349,36 @@ const CrackCodeLobby = ({ onGameReady }) => {
                                     Your duo fought hard in Round 01. Results have been finalized and recorded in the central tournament registry.
                                 </div>
                                 <div className="farewell-actions">
-                                    <button onClick={() => navigate('/')} className="exit-lobby-btn primary">
+                                    <button
+                                        onClick={handleDownloadCertificates}
+                                        disabled={isDownloadingCertificates}
+                                        className="download-cert-btn"
+                                        title="Download your participation certificates"
+                                    >
+                                        {isDownloadingCertificates ? (
+                                            <>
+                                                <span className="cert-spinner" />
+                                                <span>GENERATING CERTIFICATES...</span>
+                                            </>
+                                        ) : (
+                                            <>
+                                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                                                    <polyline points="7 10 12 15 17 10" />
+                                                    <line x1="12" y1="15" x2="12" y2="3" />
+                                                </svg>
+                                                <span>DOWNLOAD PARTICIPATION CERTIFICATES</span>
+                                            </>
+                                        )}
+                                    </button>
+
+                                    {downloadError && (
+                                        <div className="cert-download-error">
+                                            {downloadError}
+                                        </div>
+                                    )}
+
+                                    <button onClick={() => navigate('/')} className="exit-lobby-btn secondary">
                                         RETURN TO HOMEPAGE &rarr;
                                     </button>
                                 </div>
