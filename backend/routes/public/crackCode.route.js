@@ -106,11 +106,39 @@ router.get("/team-status/:teamId", async (req, res) => {
     if (!mongoose.Types.ObjectId.isValid(teamId)) {
       return res.status(400).json({ message: "Invalid Team ID" });
     }
-    const team = await Team.findById(teamId).select("currentRound deadlockResult");
+    const team = await Team.findById(teamId).select("name members currentRound deadlockResult");
     if (!team) return res.status(404).json({ message: "Team not found" });
     res.json(team);
   } catch (error) {
     res.status(500).json({ message: "Error fetching team status" });
+  }
+});
+
+/*
+  GET /crack-code/certificate/:teamId
+  Generates and downloads dynamically rendered participation certificates (ZIP) for the team.
+*/
+router.get("/certificate/:teamId", async (req, res) => {
+  try {
+    const { teamId } = req.params;
+    if (!mongoose.Types.ObjectId.isValid(teamId)) {
+      return res.status(400).json({ message: "Invalid Team ID" });
+    }
+
+    const { generateTeamCertificates } = require("../../utils/certificateGenerator");
+    const { filePath, filename } = await generateTeamCertificates(teamId);
+
+    res.download(filePath, filename, (err) => {
+      if (err) {
+        console.error("[CERT] Error sending file to client:", err);
+        if (!res.headersSent) {
+          res.status(500).json({ message: "Error downloading certificate archive" });
+        }
+      }
+    });
+  } catch (error) {
+    console.error("[CERT] Certificate generation error:", error.message);
+    res.status(500).json({ message: error.message || "Failed to generate certificates" });
   }
 });
 

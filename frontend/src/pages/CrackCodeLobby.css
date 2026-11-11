@@ -743,7 +743,85 @@
 }
 
 .farewell-actions {
-    margin-top: 1.25rem;
+    margin-top: 1.5rem;
     width: 100%;
-    max-width: 280px;
+    max-width: 340px;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.download-cert-btn {
+    width: 100%;
+    padding: 0.875rem 1.25rem;
+    background: #F5A21F;
+    border: 1px solid #FFAF38;
+    border-radius: 6px;
+    color: #0E0E10;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.8125rem;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.625rem;
+    box-shadow: 0 4px 14px rgba(245, 162, 31, 0.25);
+    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.download-cert-btn:hover:not(:disabled) {
+    background: #FFAF38;
+    transform: translateY(-1px);
+    box-shadow: 0 6px 18px rgba(245, 162, 31, 0.35);
+}
+
+.download-cert-btn:active:not(:disabled) {
+    transform: translateY(0);
+}
+
+.download-cert-btn:disabled {
+    opacity: 0.75;
+    cursor: not-allowed;
+    background: #8A6425;
+    border-color: #A37830;
+    color: #D1C9BC;
+    box-shadow: none;
+}
+
+.cert-spinner {
+    width: 16px;
+    height: 16px;
+    border: 2px solid rgba(14, 14, 16, 0.3);
+    border-top-color: #0E0E10;
+    border-radius: 50%;
+    animation: spin 0.75s linear infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+.cert-download-error {
+    font-size: 0.75rem;
+    color: #FF5E62;
+    background: rgba(255, 94, 98, 0.1);
+    border: 1px solid rgba(255, 94, 98, 0.25);
+    border-radius: 4px;
+    padding: 0.5rem 0.75rem;
+    line-height: 1.4;
+    text-align: center;
+}
+
+.exit-lobby-btn.secondary {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    color: #A8A398;
+}
+
+.exit-lobby-btn.secondary:hover {
+    background: rgba(255, 255, 255, 0.07);
+    border-color: rgba(255, 255, 255, 0.25);
+    color: #F6ECD6;
 }
