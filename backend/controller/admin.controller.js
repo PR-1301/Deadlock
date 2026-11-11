@@ -670,6 +670,7 @@ exports.checkTeam = async (req, res) => {
                 team: {
                     _id: team._id,
                     name: team.name,
+                    members: team.members,
                     currentRound: team.currentRound
                 }
             });

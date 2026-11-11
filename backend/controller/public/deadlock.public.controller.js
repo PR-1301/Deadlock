@@ -291,7 +291,7 @@ exports.getMatchByTeam = async (req, res) => {
         const match = await DeadlockMatch.findOne({
             $or: [{ teamA: teamId }, { teamB: teamId }],
             status: { $in: ["lobby", "ongoing"] }
-        }).populate("teamA teamB", "name");
+        }).populate("teamA teamB", "name members");
 
         if (!match) {
             return res.status(200).json({
@@ -308,6 +308,7 @@ exports.getMatchByTeam = async (req, res) => {
             status: match.status,
             team: isTeamA ? "A" : "B",
             opponentName: opponent ? opponent.name : "PENDING...",
+            opponentMembers: opponent && Array.isArray(opponent.members) ? opponent.members : [],
             tugPosition: match.tugPosition,
             maxPull: match.maxPull
         });
