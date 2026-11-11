@@ -1,14 +1,14 @@
 import React from 'react';
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import './AdminLayout.css';
-import { clearAdminSession } from '../../api/adminAuth';
+import { adminLogout } from '../../api/adminAuth';
 
 const AdminLayout = () => {
     const navigate = useNavigate();
 
-    const handleLogout = () => {
+    const handleLogout = async () => {
         if (window.confirm('Terminate Admin Session?')) {
-            clearAdminSession();
+            await adminLogout();
             navigate('/admin/login');
         }
     };

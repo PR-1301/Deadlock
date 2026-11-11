@@ -12,7 +12,22 @@ const crypto = require("crypto");
   so changing the passcode also invalidates every token already issued.
 */
 
-const TOKEN_TTL_MS = 12 * 60 * 60 * 1000; // 12 hours: covers a full event day
+const DEFAULT_TTL_MINUTES = 30;
+
+const resolveTokenTtlMs = () => {
+  const parsed = Number(process.env.ADMIN_TOKEN_TTL_MINUTES);
+  const minutes = Number.isFinite(parsed) && parsed > 0 ? parsed : DEFAULT_TTL_MINUTES;
+  return minutes * 60 * 1000;
+};
+
+const revokedTokens = new Map(); // jti -> exp
+
+const pruneRevokedTokens = () => {
+  const now = Date.now();
+  for (const [jti, exp] of revokedTokens.entries()) {
+    if (now >= exp) revokedTokens.delete(jti);
+  }
+};
 
 const getPasscode = () => process.env.ADMIN_PASSCODE || "";
 
@@ -37,25 +52,43 @@ const isConfigured = () => getPasscode().length > 0;
 const checkPasscode = (passcode) => isConfigured() && typeof passcode === "string" && safeEqual(passcode, getPasscode());
 
 const issueToken = () => {
-  const expiresAt = Date.now() + TOKEN_TTL_MS;
-  const payload = b64url(JSON.stringify({ role: "admin", exp: expiresAt }));
+  const now = Date.now();
+  const expiresAt = now + resolveTokenTtlMs();
+  const jti = crypto.randomBytes(12).toString("hex");
+  const payload = b64url(JSON.stringify({ role: "admin", iat: now, exp: expiresAt, jti }));
   return { token: `${payload}.${b64url(sign(payload))}`, expiresAt };
 };
 
-const verifyToken = (token) => {
-  if (!isConfigured() || typeof token !== "string") return false;
+const verifyTokenWithDetails = (token) => {
+  if (!isConfigured() || typeof token !== "string") return { valid: false };
   const [payload, signature] = token.split(".");
-  if (!payload || !signature) return false;
+  if (!payload || !signature) return { valid: false };
 
   const expected = sign(payload);
   const given = Buffer.from(signature, "base64url");
-  if (given.length !== expected.length || !crypto.timingSafeEqual(given, expected)) return false;
+  if (given.length !== expected.length || !crypto.timingSafeEqual(given, expected)) return { valid: false };
 
   try {
-    const { role, exp } = JSON.parse(Buffer.from(payload, "base64url").toString("utf8"));
-    return role === "admin" && typeof exp === "number" && Date.now() < exp;
+    const { role, exp, jti } = JSON.parse(Buffer.from(payload, "base64url").toString("utf8"));
+    if (role !== "admin" || typeof exp !== "number" || Date.now() >= exp) {
+      return { valid: false };
+    }
+    pruneRevokedTokens();
+    if (jti && revokedTokens.has(jti)) {
+      return { valid: false };
+    }
+    return { valid: true, exp, jti: jti || null };
   } catch {
-    return false;
+    return { valid: false };
+  }
+};
+
+const verifyToken = (token) => verifyTokenWithDetails(token).valid;
+
+const revokeToken = (token) => {
+  const details = verifyTokenWithDetails(token);
+  if (details.valid && details.jti) {
+    revokedTokens.set(details.jti, details.exp);
   }
 };
 
@@ -83,7 +116,11 @@ const failures = new Map(); // ip -> { count, resetAt }
 
 const loginRateLimited = (ip) => {
   const entry = failures.get(ip);
-  if (!entry || Date.now() > entry.resetAt) return false;
+  if (!entry) return false;
+  if (Date.now() > entry.resetAt) {
+    failures.delete(ip);
+    return false;
+  }
   return entry.count >= MAX_FAILURES;
 };
 
@@ -101,6 +138,9 @@ module.exports = {
   checkPasscode,
   issueToken,
   verifyToken,
+  verifyTokenWithDetails,
+  revokeToken,
+  extractToken,
   requireAdmin,
   loginRateLimited,
   recordLoginFailure,

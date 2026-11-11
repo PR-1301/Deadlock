@@ -19,14 +19,21 @@ const {
 } = require("../../controller/admin.controller.js");
 
 const { solveProblem } = require("../../controller/deadlock.controller.js");
-const { getSecuritySettings, updateSecuritySettings } = require("../../controller/admin/security.controller.js");
+const {
+    getSecuritySettings,
+    updateSecuritySettings,
+    createSecurityLog,
+    getSecurityLogs,
+    clearSecurityLogs
+} = require("../../controller/admin/security.controller.js");
 const { requireAdmin } = require("../../utils/adminAuth");
 
 // ---------------------------------------------------------------------------
-// PUBLIC - used by player pages (registration + anti-cheat settings).
+// PUBLIC - used by player pages (registration + anti-cheat settings/logs).
 // Must stay above `router.use(requireAdmin)`.
 // ---------------------------------------------------------------------------
 router.get("/security-settings", getSecuritySettings);
+router.post("/security-logs", createSecurityLog);
 router.get("/team/check/:name", checkTeam);
 router.post("/team/check", checkTeam);
 router.post("/team", createTeam);
@@ -37,6 +44,8 @@ router.post("/team", createTeam);
 router.use(requireAdmin);
 
 router.post("/security-settings", updateSecuritySettings);
+router.get("/security-logs", getSecurityLogs);
+router.delete("/security-logs", clearSecurityLogs);
 
 router.post("/match", createMatch);
 

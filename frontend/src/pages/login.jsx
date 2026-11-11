@@ -162,8 +162,15 @@ const Deadlock = () => {
 
         {/* Cyber Notification */}
         {notification && (
-          <div className={`cyber-notification ${notification.type}`}>
-            {notification.message}
+          <div className={`cyber-notification ${notification.type}`} role="status">
+            <span className="notif-corner tl" aria-hidden="true" />
+            <span className="notif-corner tr" aria-hidden="true" />
+            <span className="notif-corner bl" aria-hidden="true" />
+            <span className="notif-corner br" aria-hidden="true" />
+            <span className="notif-chip">
+              <span>{notification.type === "success" ? "OK" : "ERR"}</span>
+            </span>
+            <span className="notif-text">{notification.message}</span>
           </div>
         )}
 

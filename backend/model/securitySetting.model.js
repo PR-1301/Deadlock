@@ -17,6 +17,18 @@ const SecuritySettingSchema = new mongoose.Schema({
     forceFullscreen: {
         type: Boolean,
         default: false
+    },
+    blockDevTools: {
+        type: Boolean,
+        default: false
+    },
+    blockAiAssistant: {
+        type: Boolean,
+        default: false
+    },
+    enableLogging: {
+        type: Boolean,
+        default: false
     }
 }, { timestamps: true });
 

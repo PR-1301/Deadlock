@@ -4,6 +4,8 @@ const {
   isConfigured,
   checkPasscode,
   issueToken,
+  revokeToken,
+  extractToken,
   requireAdmin,
   loginRateLimited,
   recordLoginFailure,
@@ -40,5 +42,15 @@ router.post("/login", (req, res) => {
   -> 200 if the bearer token is valid, 401 otherwise
 */
 router.get("/verify", requireAdmin, (req, res) => res.json({ ok: true }));
+
+/*
+  POST /api/admin/auth/logout
+  -> revokes the current bearer token immediately
+*/
+router.post("/logout", (req, res) => {
+  const token = extractToken(req);
+  if (token) revokeToken(token);
+  return res.json({ ok: true });
+});
 
 module.exports = router;

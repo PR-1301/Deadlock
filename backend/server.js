@@ -10,7 +10,8 @@ const publicCrackCodeRoutes = require("./routes/public/crackCode.route");
 
 const deadlockAdminRoutes = require("./routes/admin/admin.route");
 const adminAuthRoutes = require("./routes/admin/auth.route");
-const { requireAdmin, verifyToken, isConfigured: adminAuthConfigured } = require("./utils/adminAuth");
+const { requireAdmin, verifyTokenWithDetails, isConfigured: adminAuthConfigured } = require("./utils/adminAuth");
+const { recordSecurityLog } = require("./controller/admin/security.controller");
 const deadlockRoute = require("./routes/public/deadlock.routes");
 
 
@@ -32,14 +33,33 @@ io.on("connection", (socket) => {
   console.log(">>> [SOCKET] User connected:", socket.id);
 
   // Admin room receives security logs: require a valid admin token to join
+  // and evict automatically when the token expires.
+  let adminExpiryTimer = null;
+  const clearAdminExpiryTimer = () => {
+    if (adminExpiryTimer) {
+      clearTimeout(adminExpiryTimer);
+      adminExpiryTimer = null;
+    }
+  };
+
   socket.on("join-admin", (token) => {
-    if (!verifyToken(token)) {
+    clearAdminExpiryTimer();
+    const details = verifyTokenWithDetails(token);
+    if (!details.valid) {
+      socket.leave("admin-room");
       console.log(">>> [SOCKET] Rejected admin join (invalid token):", socket.id);
       socket.emit("admin-auth-error", { message: "ADMIN AUTHENTICATION REQUIRED" });
       return;
     }
     socket.join("admin-room");
     console.log(">>> [SOCKET] Admin joined room:", socket.id);
+
+    const remainingMs = Math.max(0, details.exp - Date.now());
+    adminExpiryTimer = setTimeout(() => {
+      socket.leave("admin-room");
+      socket.emit("admin-auth-error", { message: "ADMIN SESSION EXPIRED" });
+      console.log(">>> [SOCKET] Evicted expired admin socket:", socket.id);
+    }, remainingMs);
   });
 
   socket.on("join-team", (teamName) => {
@@ -48,25 +68,40 @@ io.on("connection", (socket) => {
     console.log(`>>> [SOCKET] Team [${teamName}] joined room:`, socket.id);
   });
 
-  socket.on("report-illegal-action", (data) => {
-    console.log(">>> [SECURITY] Illegal action reported:", data);
-    io.to("admin-room").emit("new-log", {
-      ...data,
-      timestamp: new Date(),
-      type: "ALERT"
-    });
+  const handleSecurityReport = async (payload, ack) => {
+    try {
+      const saved = await recordSecurityLog(io, payload);
+      if (saved?.skipped) {
+        if (typeof ack === "function") ack({ ok: true, skipped: true });
+        return;
+      }
+      console.log(`>>> [SECURITY] [${saved.category}] [${saved.teamName}] ${saved.message}`);
+      if (typeof ack === "function") ack({ ok: true, id: saved._id });
+    } catch (err) {
+      console.error(">>> [SECURITY] Error logging event:", err.message);
+      if (typeof ack === "function") ack({ ok: false });
+    }
+  };
+
+  socket.on("report-security-violation", (data, ack) => {
+    handleSecurityReport(data, ack);
   });
 
-  socket.on("report-tab-switch", (data) => {
-    console.log(">>> [SECURITY] Tab switch reported:", data);
-    io.to("admin-room").emit("new-log", {
-      ...data,
-      timestamp: new Date(),
-      type: "TAB_SWITCH"
-    });
+  socket.on("report-illegal-action", (data, ack) => {
+    handleSecurityReport({ ...(data || {}), type: (data && data.type) || "ALERT" }, ack);
+  });
+
+  socket.on("report-tab-switch", (data, ack) => {
+    handleSecurityReport({
+      ...(data || {}),
+      type: "TAB_SWITCH",
+      category: (data && data.category) || "TAB_SWITCH",
+      blocked: false
+    }, ack);
   });
 
   socket.on("disconnect", () => {
+    clearAdminExpiryTimer();
     console.log(">>> [SOCKET] User disconnected:", socket.id);
   });
 });

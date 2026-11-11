@@ -4,6 +4,7 @@ const Team = require("../model/team.model");
 const DeadlockQuestion = require("../model/deadlockQuestion");
 const DeadlockSubmission = require("../model/deadlockSubmission.model");
 const GameState = require("../model/gameState.model");
+const { clearAllSecurityLogs } = require("./admin/security.controller");
 
 /* ----------------------------------------------------
 CREATE DEADLOCK MATCH
@@ -339,7 +340,10 @@ exports.terminateSession = async (req, res) => {
             { upsert: true }
         );
 
-        // 4. Deep reset all teams to factory defaults for the round
+        // 4. Clear stored security violation logs and notify open admin consoles
+        await clearAllSecurityLogs(req.app.get("io"));
+
+        // 5. Deep reset all teams to factory defaults for the round
         await Team.updateMany({}, {
             deadlockResult: 'pending',
             currentRound: 'pending',
@@ -350,7 +354,7 @@ exports.terminateSession = async (req, res) => {
 
         res.json({
             success: true,
-            message: "Session terminated. All systems reset to baseline including Crack Code data and Global State."
+            message: "Session terminated. All systems, security logs, Crack Code data, and Global State reset to baseline."
         });
     } catch (err) {
         res.status(500).json({

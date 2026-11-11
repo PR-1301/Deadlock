@@ -61,6 +61,7 @@ const DeadlockPage = () => {
     }, [submissionResult]);
 
     const handleCloseOverlay = useCallback(() => {
+        submissionResultRef.current = null;
         setSubmissionResult(null);
     }, []);
 
@@ -69,13 +70,17 @@ const DeadlockPage = () => {
         isFetching.current = true;
         try {
             const res = await axios.get(`${BASE_URL}/api/public/deadlock/match/${matchId}`);
+            // Discard stale poll response if a submission started while this request was in flight
+            if (isSubmittingRef.current) return;
             const data = res.data;
 
             // Detect if question advanced (opponent solved it)
             if (lastQuestionIndex.current !== -1 && data.currentQuestionIndex > lastQuestionIndex.current) {
                 // If we aren't currently submitting AND we don't already have a local AC being displayed, show "Too Slow!"
                 if (!isSubmittingRef.current && submissionResultRef.current?.verdict !== "AC") {
-                    setSubmissionResult({ verdict: "CONFLICT", error: "Opponent solved it first!" });
+                    const conflictResult = { verdict: "CONFLICT", error: "Opponent solved it first!" };
+                    submissionResultRef.current = conflictResult;
+                    setSubmissionResult(conflictResult);
                 }
             }
             lastQuestionIndex.current = data.currentQuestionIndex;
@@ -134,18 +139,24 @@ const DeadlockPage = () => {
     }, [currentQuestion?._id]);
 
     const handleCodeSubmit = async () => {
-        if (!teamId) {
+        if (isSubmittingRef.current || match?.status === 'finished' || !currentQuestion?._id) {
+            return;
+        }
+        const activeTeamId = teamId || localStorage.getItem('teamId');
+        if (!activeTeamId) {
             alert("No team identified. Please join properly.");
             return;
         }
 
+        isSubmittingRef.current = true;
         setIsSubmitting(true);
+        submissionResultRef.current = null;
         setSubmissionResult(null);
 
         try {
             const payload = {
                 matchId,
-                teamId,
+                teamId: activeTeamId,
                 questionId: currentQuestion._id,
                 language,
                 code: codes[language]
@@ -156,7 +167,9 @@ const DeadlockPage = () => {
             if (res.status === 200) {
                 const data = res.data;
                 if (data.success) {
-                    setSubmissionResult({ verdict: "AC" });
+                    const acResult = { verdict: "AC" };
+                    submissionResultRef.current = acResult;
+                    setSubmissionResult(acResult);
                     setTugPosition(data.tugPosition);
                     // Slight screen shake / pulse on test pass
                     setIsScreenPulse(true);
@@ -176,41 +189,55 @@ const DeadlockPage = () => {
                             tugPosition: data.tugPosition
                         }));
                     } else {
+                        isSubmittingRef.current = false;
                         fetchMatchState();
                     }
                 } else {
-                    setSubmissionResult({
+                    const failResult = {
                         verdict: data.verdict,
                         error: data.error
-                    });
+                    };
+                    submissionResultRef.current = failResult;
+                    setSubmissionResult(failResult);
                 }
             }
         } catch (err) {
             if (err.response && err.response.status === 409) {
-                setSubmissionResult({ verdict: "CONFLICT", error: "The question has changed!" });
+                const conflictResult = { verdict: "CONFLICT", error: "The question has changed!" };
+                submissionResultRef.current = conflictResult;
+                setSubmissionResult(conflictResult);
+                isSubmittingRef.current = false;
                 fetchMatchState();
             } else {
-                setSubmissionResult({ verdict: "ERROR", error: "Submission failed" });
+                const errResult = { verdict: "ERROR", error: "Submission failed" };
+                submissionResultRef.current = errResult;
+                setSubmissionResult(errResult);
             }
         } finally {
+            isSubmittingRef.current = false;
             setIsSubmitting(false);
         }
     };
 
+    const handleCodeSubmitRef = React.useRef(handleCodeSubmit);
+    useEffect(() => {
+        handleCodeSubmitRef.current = handleCodeSubmit;
+    });
+
     // Global keyboard shortcut: Ctrl+Enter or Cmd+Enter to submit solution
     useEffect(() => {
         const handleGlobalKeyDown = (e) => {
-            if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+            if ((e.ctrlKey || e.metaKey) && e.key === 'Enter' && !e.repeat) {
                 e.preventDefault();
                 if (!isSubmittingRef.current && match?.status !== 'finished') {
-                    handleCodeSubmit();
+                    handleCodeSubmitRef.current();
                 }
             }
         };
 
         window.addEventListener('keydown', handleGlobalKeyDown);
         return () => window.removeEventListener('keydown', handleGlobalKeyDown);
-    }, [match?.status, handleCodeSubmit]);
+    }, [match?.status]);
 
     if (loading) {
         return (
@@ -261,6 +288,7 @@ const DeadlockPage = () => {
                         setLanguage={setLanguage}
                         isLocked={match.status === 'finished' || isSubmitting}
                         onSubmitShortcut={handleCodeSubmit}
+                        security={security}
                     />
                     <SubmissionPanel
                         onSubmit={handleCodeSubmit}

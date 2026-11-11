@@ -1,11 +1,15 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import '../../pages/Admin.css'; // Reuse existing admin styles for theme consistency
 import { adminLogin } from '../../api/adminAuth';
 
 const AdminLogin = () => {
+    const [searchParams] = useSearchParams();
+    const expiredNotice = searchParams.get('expired') === '1'
+        ? 'ADMIN SESSION EXPIRED — PLEASE RE-AUTHENTICATE'
+        : '';
     const [passcode, setPasscode] = useState('');
-    const [error, setError] = useState('');
+    const [error, setError] = useState(expiredNotice);
     const [submitting, setSubmitting] = useState(false);
     const navigate = useNavigate();
 

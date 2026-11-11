@@ -1,6 +1,7 @@
-import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef, useCallback } from 'react';
 import { io } from 'socket.io-client';
-import { getAdminToken } from '../api/adminAuth';
+import { getAdminToken, handleAdminUnauthorized } from '../api/adminAuth';
+import { getSecurityLogs, clearSecurityLogs as clearSecurityLogsApi } from '../api/securityAdmin';
 
 const AdminContext = createContext();
 
@@ -14,10 +15,44 @@ export const useAdmin = () => {
 
 export const AdminProvider = ({ children }) => {
     const [logs, setLogs] = useState([]);
+    const [logsLoading, setLogsLoading] = useState(true);
     const [connected, setConnected] = useState(false);
     const socketRef = useRef();
 
+    const refreshLogs = useCallback(async () => {
+        setLogsLoading(true);
+        try {
+            const res = await getSecurityLogs({ limit: 300 });
+            if (res.success && Array.isArray(res.logs)) {
+                setLogs(res.logs);
+            }
+        } catch (err) {
+            console.error(">>> [ADMIN_CONTEXT] Failed to load persisted logs:", err);
+        } finally {
+            setLogsLoading(false);
+        }
+    }, []);
+
+    const clearLogs = useCallback(async () => {
+        await clearSecurityLogsApi();
+        setLogs([]);
+    }, []);
+
     useEffect(() => {
+        let active = true;
+        getSecurityLogs({ limit: 300 })
+            .then((res) => {
+                if (active && res.success && Array.isArray(res.logs)) {
+                    setLogs(res.logs);
+                }
+            })
+            .catch((err) => {
+                console.error(">>> [ADMIN_CONTEXT] Failed to load persisted logs:", err);
+            })
+            .finally(() => {
+                if (active) setLogsLoading(false);
+            });
+
         const socketHost = import.meta.env.VITE_API_BASE_URL || `http://${window.location.hostname}:5000`;
 
         socketRef.current = io(socketHost, {
@@ -30,7 +65,21 @@ export const AdminProvider = ({ children }) => {
         });
 
         socketRef.current.on('new-log', (log) => {
-            setLogs(prev => [log, ...prev].slice(0, 100)); // Keep last 100 logs
+            setLogs((prev) => {
+                if (log?._id && prev.some((item) => item._id === log._id)) {
+                    return prev;
+                }
+                return [log, ...prev].slice(0, 300);
+            });
+        });
+
+        socketRef.current.on('security-logs-cleared', () => {
+            setLogs([]);
+        });
+
+        socketRef.current.on('admin-auth-error', () => {
+            setConnected(false);
+            handleAdminUnauthorized('expired');
         });
 
         socketRef.current.on('connect_error', (err) => {
@@ -43,6 +92,7 @@ export const AdminProvider = ({ children }) => {
         });
 
         return () => {
+            active = false;
             if (socketRef.current) {
                 socketRef.current.disconnect();
             }
@@ -51,6 +101,9 @@ export const AdminProvider = ({ children }) => {
 
     const value = {
         logs,
+        logsLoading,
+        refreshLogs,
+        clearLogs,
         connected,
         socket: socketRef.current
     };
